@@ -38,9 +38,9 @@ EvalSet (question + ground_truth)
 
 | Agent | Model | Role |
 |---|---|---|
-| Scientist | GPT-1900 | Proposes experiments, interprets results, concludes |
-| Simulator | Modern LLM | Returns raw observational data with configurable noise |
-| Judge | Modern LLM| Scores final hypothesis against ground truth with partial credit |
+| Scientist | GPT-1900 (DigitalOcean GPU) | Proposes experiments, interprets results, concludes |
+| Simulator | Cloudflare Workers AI | Returns raw observational data with configurable noise |
+| Judge | Cloudflare Workers AI | Scores final hypothesis against ground truth with partial credit |
 
 ---
 
@@ -64,15 +64,24 @@ cs153-project/
 # 1. Install dependencies
 pip install -r requirements.txt
 
-# 2. Set API keys
+# 2. Set credentials
 cp .env.example .env
-# Fill in ANTHROPIC_API_KEY or OPENAI_API_KEY, and SCIENTIST_API_URL
+# Fill in CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, and SCIENTIST_API_URL
 
 # 3. Run eval against a hosted GPT-1900 instance
-python eval/runner.py --eval eval/eval_set.json --out results/runs/
+python eval/runner.py \
+  --scientist-url http://<droplet-ip>:8000 \
+  --eval eval/eval_set.json \
+  --out results/runs/
 
-# 4. (Optional) Spin up the GPT-1900 server locally
-python deploy/server.py
+# 4. (Optional) Override the Cloudflare model
+python eval/runner.py \
+  --scientist-url http://<droplet-ip>:8000 \
+  --judge-model @cf/meta/llama-3.1-8b-instruct-fast \
+  --simulator-model @cf/meta/llama-3.1-8b-instruct-fast
+
+# 5. Spin up the GPT-1900 server on DigitalOcean — see deploy/README.md
+python deploy/server.py --model-dir /path/to/gpt1900
 ```
 
 ---

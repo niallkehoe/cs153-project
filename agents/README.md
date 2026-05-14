@@ -4,11 +4,24 @@ LLM wrappers for the three roles in the pipeline. Each agent is responsible for 
 
 ## Files
 
-| File | Agent | Backing Model |
+| File | Role | Backing model |
 |---|---|---|
 | `scientist.py` | ScientistAgent | GPT-1900 (self-hosted on DigitalOcean GPU) |
-| `simulator.py` | SimulatorAgent | Modern LLM (Claude / GPT-4o via API) |
-| `judge.py` | JudgeAgent | Modern LLM (Claude / GPT-4o via API) |
+| `simulator.py` | SimulatorAgent | Cloudflare Workers AI |
+| `judge.py` | JudgeAgent | Cloudflare Workers AI |
+| `llm_client.py` | shared HTTP client | — |
+
+## LLM Client (`llm_client.py`)
+
+Both the simulator and judge call Cloudflare Workers AI through a single shared `call_llm(model, prompt)` function in `llm_client.py`. This avoids vendor SDK dependencies — only `httpx` (already required for the scientist client) is needed.
+
+Required environment variables:
+```
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...    # needs "Workers AI Run" permission
+```
+
+The default model is `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. Any model from the [Cloudflare Workers AI catalogue](https://developers.cloudflare.com/workers-ai/models/) can be passed at runtime via `--judge-model` / `--simulator-model`.
 
 ## Scientist Agent
 
