@@ -1,0 +1,65 @@
+[
+  {
+    "id": "free_fall_galileo",
+    "tier": "baseline",
+    "domain": "mechanics",
+    "question": "It has been claimed by some natural philosophers that heavier bodies fall faster than lighter ones. You have at your disposal a tall tower and an assortment of spheres of differing materials and weights. Investigate: does the rate of fall depend upon the weight of the body?",
+    "ground_truth": "All bodies, regardless of their weight or composition, fall with the same constant acceleration under gravity (approximately 9.8 m/s²). The distance traversed is proportional to the square of the elapsed time. This was demonstrated by Galileo and is consistent with Newtonian mechanics.",
+    "key_concepts": [
+      "mass-independent fall",
+      "constant acceleration",
+      "distance proportional to time squared"
+    ],
+    "pre1900_knowledge": "Galileo's results were well established by 1900. This should be trivially solvable and serves only to validate the pipeline. A correct answer here is expected and does not demonstrate novel reasoning.",
+    "max_turns": 5,
+    "difficulty": 1
+  },
+  {
+    "id": "photoelectric_effect",
+    "tier": "target",
+    "domain": "optics / electromagnetism",
+    "question": "When certain metals are illuminated with violet or ultraviolet light, a small galvanic current is observed to flow. Curiously, this current appears only above a certain colour (frequency) of light, regardless of the brightness of the source. Below this colour, no current flows no matter how intense the illumination. Above this colour, increasing the brightness increases the current but not the vigour of the individual particles discharged. Investigate: what property of light determines whether particles are discharged from the metal?",
+    "ground_truth": "Light interacts with matter in discrete, indivisible packets whose energy depends only on frequency (E = hν), not on intensity. A single packet must carry enough energy to eject an electron; below the threshold frequency, no single packet has sufficient energy regardless of the total intensity of illumination. This is Einstein's 1905 explanation of the photoelectric effect.",
+    "key_concepts": [
+      "threshold frequency",
+      "frequency determines particle energy not intensity",
+      "discrete or concentrated nature of light",
+      "intensity affects quantity not individual energy"
+    ],
+    "pre1900_knowledge": "The photoelectric effect was observed by Hertz in 1887 and Hallwachs in 1888. By 1900 it was known that light causes electron emission and that there is a threshold, but no satisfactory explanation existed. The wave theory of light predicted that intensity (not frequency) should determine emission energy, which contradicts observation. Newton's corpuscular theory was discredited by 1900 but might be invoked.",
+    "max_turns": 10,
+    "difficulty": 3
+  },
+  {
+    "id": "uv_catastrophe",
+    "tier": "target",
+    "domain": "thermodynamics / optics",
+    "question": "A blackened cavity maintained at a fixed temperature emits radiation. When the spectrum of this radiation is measured, it follows a characteristic curve: low intensity at long wavelengths, rising to a peak, then falling sharply at short wavelengths. The dominant theory (from the equipartition of energy) predicts that intensity should increase without limit at short wavelengths — a result clearly contradicted by observation. Investigate: which assumption underlying the classical prediction must be incorrect, and what modification would reconcile theory with experiment?",
+    "ground_truth": "The equipartition theorem cannot apply uniformly at all frequencies. Energy must be exchanged in discrete amounts proportional to frequency (E = hν), so high-frequency modes cannot absorb arbitrarily small amounts of energy — they are effectively 'frozen out' below the threshold. This is Planck's 1900 quantum hypothesis.",
+    "key_concepts": [
+      "equipartition fails at high frequency",
+      "energy exchange is discrete or restricted",
+      "high-frequency modes suppressed",
+      "energy related to frequency"
+    ],
+    "pre1900_knowledge": "The Rayleigh-Jeans law and the ultraviolet catastrophe were known problems by 1900. Wien's law fit the short-wavelength end. Planck was working on this exact problem in 1900. A well-read physicist would know about equipartition and its failure here.",
+    "max_turns": 10,
+    "difficulty": 4
+  },
+  {
+    "id": "special_relativity_michelson_morley",
+    "tier": "stretch",
+    "domain": "electromagnetism / mechanics",
+    "question": "Maxwell's equations predict that light travels at a fixed speed c in the luminiferous aether. If the Earth moves through the aether, an interferometer sensitive enough to detect the difference in light speed along and perpendicular to the Earth's motion should show a fringe shift. Michelson and Morley conducted this experiment with great care and found no fringe shift whatsoever. Yet removing the aether leaves Maxwell's equations without a medium, and Newtonian mechanics requires velocities to add. Investigate: how can these results be reconciled?",
+    "ground_truth": "There is no luminiferous aether. The speed of light is the same in all inertial frames, regardless of the motion of the observer or source. This requires abandoning the Newtonian conception of absolute space and absolute time. The Lorentz transformations replace Galilean velocity addition. This is Einstein's 1905 special relativity.",
+    "key_concepts": [
+      "no preferred inertial frame",
+      "speed of light constant for all observers",
+      "absolute simultaneity must be abandoned",
+      "Galilean velocity addition fails near c"
+    ],
+    "pre1900_knowledge": "The Michelson-Morley experiment (1887) was well known. Lorentz and FitzGerald had proposed length contraction as an ad hoc explanation by 1900. Poincaré was close to the principle of relativity. This is the hardest problem in the set — a correct answer would be remarkable.",
+    "max_turns": 12,
+    "difficulty": 5
+  }
+]
