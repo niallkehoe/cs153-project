@@ -49,15 +49,44 @@ class GenerateRequest(BaseModel):
     """Request body for the /generate endpoint."""
 
     prompt: str = Field(..., description="Full prompt string including conversation history.")
-    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
-    top_k: int = Field(default=50, ge=1, le=500)
-    max_new_tokens: int = Field(default=512, ge=1, le=2048)
+    temperature: float = Field(default=0.6, ge=0.0, le=2.0)
+    top_k: int = Field(default=20, ge=1, le=500)
+    max_new_tokens: int = Field(default=256, ge=1, le=2048)
+    stop_sequences: list[str] = Field(
+        default_factory=list,
+        description="Stop generation when any of these strings appear in the output.",
+    )
 
 
 class GenerateResponse(BaseModel):
     """Response body from the /generate endpoint."""
 
     text: str = Field(..., description="Generated text (continuation only, not including prompt).")
+
+
+def _apply_stop_sequences(text: str, stop_sequences: list[str]) -> str:
+    """Trim the generated text at the first occurrence of any stop sequence."""
+    for seq in stop_sequences:
+        idx = text.find(seq)
+        if idx >= 0:
+            text = text[: idx + len(seq)]
+    return text
+
+
+def _truncate_repetition(text: str, ngram: int = 4, max_reps: int = 4) -> str:
+    """Return text truncated just before a repeating N-gram loop begins."""
+    words = text.split()
+    if len(words) < ngram * max_reps:
+        return text
+    seen: dict[tuple, list[int]] = {}
+    for i in range(len(words) - ngram + 1):
+        gram = tuple(words[i : i + ngram])
+        positions = seen.setdefault(gram, [])
+        positions.append(i)
+        if len(positions) >= max_reps:
+            cut = positions[max_reps - 1]
+            return " ".join(words[:cut]).strip()
+    return text
 
 
 app = FastAPI(
@@ -197,6 +226,8 @@ async def generate(request: GenerateRequest) -> GenerateResponse:
                 generated.append(token)
 
         text = _tokenizer.decode(generated)
+        text = _apply_stop_sequences(text, request.stop_sequences)
+        text = _truncate_repetition(text)
         return GenerateResponse(text=text)
 
     except Exception as exc:

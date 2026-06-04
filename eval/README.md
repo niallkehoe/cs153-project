@@ -47,13 +47,15 @@ See [Concern #6 (Eval Set Contamination)](../README.md#6-eval-set-contamination)
 
 ### Usage
 
+Requires the GCP SSH tunnel to be open (`SCIENTIST_API_URL=http://localhost:8000`) and `OPEN_ROUTER_API_KEY` set in `.env`.
+
 ```bash
 python eval/runner.py \
   --eval eval/eval_set.json \
   --out results/runs/ \
-  --scientist-url http://<droplet-ip>:8000 \
-  --judge-model claude-sonnet-4-5 \
-  --simulator-model claude-sonnet-4-5 \
+  --scientist-url http://localhost:8000 \
+  --judge-model anthropic/claude-3.5-haiku \
+  --simulator-model anthropic/claude-3.5-haiku \
   --noise-level 0.05 \
   --failure-rate 0.10
 ```

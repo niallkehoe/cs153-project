@@ -34,6 +34,11 @@ COMPRESS_THRESHOLD = 1500  # tokens; compress history below this headroom
 COMPRESS_KEEP_TAIL = 2     # always keep the last N turns uncompressed
 COMPRESS_MAX_CHARS = 200   # truncate compressed user turns to this many chars
 
+# Repetition detection: if any N-gram of this size appears this many times
+# in a single generation, the output is a degeneration loop — truncate it.
+REPEAT_NGRAM = 4
+REPEAT_MAX   = 4
+
 
 @dataclass
 class Turn:
@@ -42,6 +47,45 @@ class Turn:
     role: str  # "user" | "assistant"
     content: str
     compressed: bool = False
+
+
+_SPECIAL_TOKEN_RE = __import__('re').compile(r'<\|[^|]+\|>')
+
+
+def _strip_special_tokens(text: str) -> str:
+    """Remove model chat special tokens (e.g. <|user_start|>) from generated text."""
+    return _SPECIAL_TOKEN_RE.sub('', text).strip()
+
+
+def _truncate_repetition(text: str, ngram: int = REPEAT_NGRAM, max_reps: int = REPEAT_MAX) -> str:
+    """
+    Return ``text`` truncated just before a repeating N-gram loop begins.
+
+    Scans the text for the first N-gram that appears ``max_reps`` times.
+    When found, returns everything up to (but not including) the point where
+    the ``max_reps``-th repetition starts. If no loop is detected, returns
+    the original text unchanged.
+    """
+    words = text.split()
+    # #region agent log H1 - log early exit condition
+    import json as _json, time as _time
+    _dbg = {"sessionId":"4c613c","hypothesisId":"H1","location":"scientist.py:_truncate_repetition","message":"entry","data":{"word_count":len(words),"min_needed":ngram*max_reps,"will_early_exit":len(words)<ngram*max_reps},"timestamp":int(_time.time()*1000)}
+    with open("/Users/niall/Dev/cs153-project/.cursor/debug-4c613c.log","a") as _f: _f.write(_json.dumps(_dbg)+"\n")
+    # #endregion
+    if len(words) < ngram * max_reps:
+        return text
+
+    seen: dict[tuple, list[int]] = {}
+    for i in range(len(words) - ngram + 1):
+        gram = tuple(words[i : i + ngram])
+        positions = seen.setdefault(gram, [])
+        positions.append(i)
+        if len(positions) >= max_reps:
+            # Truncate at the start of the (max_reps)th occurrence
+            cut = positions[max_reps - 1]
+            return " ".join(words[:cut]).strip()
+
+    return text
 
 
 @dataclass
@@ -63,9 +107,9 @@ class ScientistAgent:
     """
 
     api_url: str
-    temperature: float = 0.7
-    top_k: int = 50
-    max_new_tokens: int = 512
+    temperature: float = 0.6
+    top_k: int = 20
+    max_new_tokens: int = 256
     prompt_path: str = "prompts/scientist.txt"
     _history: list[Turn] = field(default_factory=list, init=False, repr=False)
     _system_prompt: str = field(default="", init=False, repr=False)
@@ -102,6 +146,13 @@ class ScientistAgent:
         """
         self._maybe_compress_history()
         prompt = self._build_prompt()
+
+        # #region agent log H6 - confirm new chat template format is in prompt
+        import json as _json, time as _time
+        _dbg = {"sessionId":"4c613c","hypothesisId":"H6","location":"scientist.py:generate","message":"pre-generate","data":{"prompt_chars":len(prompt),"has_user_start":"<|user_start|>" in prompt,"has_assistant_start":"<|assistant_start|>" in prompt,"prompt_tail":prompt[-300:]},"timestamp":int(_time.time()*1000)}
+        with open("/Users/niall/Dev/cs153-project/.cursor/debug-4c613c.log","a") as _f: _f.write(_json.dumps(_dbg)+"\n")
+        # #endregion
+
         response = httpx.post(
             f"{self.api_url}/generate",
             json={
@@ -109,11 +160,21 @@ class ScientistAgent:
                 "temperature": self.temperature,
                 "top_k": self.top_k,
                 "max_new_tokens": self.max_new_tokens,
+                "stop_sequences": ["\nEND", " END"],
             },
             timeout=120,
         )
         response.raise_for_status()
         text: str = response.json()["text"]
+        text = _strip_special_tokens(text)
+        text = _truncate_repetition(text)
+
+        # #region agent log H7 - log cleaned response stored in history
+        import json as _json, time as _time
+        _dbg2 = {"sessionId":"4c613c","hypothesisId":"H7","location":"scientist.py:generate","message":"post-generate-cleaned","data":{"cleaned_text":text[:400],"word_count":len(text.split())},"timestamp":int(_time.time()*1000)}
+        with open("/Users/niall/Dev/cs153-project/.cursor/debug-4c613c.log","a") as _f: _f.write(_json.dumps(_dbg2)+"\n")
+        # #endregion
+
         self._history.append(Turn(role="assistant", content=text))
         return text
 
@@ -123,27 +184,39 @@ class ScientistAgent:
 
     def _build_prompt(self) -> str:
         """
-        Concatenate history into a single prompt string for the causal LM.
+        Build a prompt string using GPT-1900-instruct's chat special tokens.
 
-        The first user message (the research question) is embedded into the
-        scientist system prompt template via the {question} placeholder.
-        Subsequent turns are formatted as alternating USER / ASSISTANT blocks.
-        The prompt always ends with a bare "ASSISTANT:" to prime generation.
+        The model was fine-tuned with a per-round chat template; using plain
+        "USER:" / "ASSISTANT:" markers causes it to ignore all instructions.
+
+        Observed format (from model-generated continuations):
+          <|bos|>                           ← prepended by deploy/server.py
+          <|user_start|>TURN<|user_end|>
+          <|assistant_start|>RESPONSE<|assistant_end|>
+          <|bos|>                           ← between rounds
+          <|user_start|>NEXT<|user_end|>
+          <|assistant_start|>               ← generation primed here
+
+        The BOS token is injected by the server before encoding, so we start
+        the prompt string with <|user_start|>.
         """
         if not self._history:
             return ""
 
-        # Render the system prompt with the opening question
+        # First history entry is always the question; embed it in the system prompt.
         question = self._history[0].content
         rendered = self._system_prompt.format(question=question)
 
-        parts = [rendered]
-        for turn in self._history[1:]:
-            prefix = "USER" if turn.role == "user" else "ASSISTANT"
-            parts.append(f"\n\n{prefix}: {turn.content}")
+        prompt = f"<|user_start|>{rendered}<|user_end|><|assistant_start|>"
 
-        parts.append("\n\nASSISTANT:")
-        return "".join(parts)
+        for turn in self._history[1:]:
+            if turn.role == "assistant":
+                prompt += f"{turn.content}<|assistant_end|>"
+            else:
+                # User turn (tool result or reprompt): start a new round with <|bos|>
+                prompt += f"<|bos|><|user_start|>{turn.content}<|user_end|><|assistant_start|>"
+
+        return prompt
 
     def _maybe_compress_history(self) -> None:
         """

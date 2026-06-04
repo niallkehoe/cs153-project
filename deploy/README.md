@@ -1,93 +1,96 @@
 # deploy/
 
-Infrastructure for serving GPT-1900 on a DigitalOcean GPU droplet.
+Infrastructure for serving GPT-1900 on a GCP GPU instance.
 
 ## Overview
 
 GPT-1900 (3.3B parameters) requires a GPU for inference. In bf16, the model
-weights occupy ~6.6GB of VRAM. A DigitalOcean GPU Droplet with an H100 80GB
-or NVIDIA L40S 48GB is more than sufficient.
+weights occupy ~6.6GB of VRAM. The current setup uses an NVIDIA L4 (24GB) on
+Google Cloud Platform, accessed locally via an SSH tunnel.
 
-**Estimated cost:** ~$1.40–$2.00/hr (L40S). Spin up only during eval runs.
+**VM:** `gpu-l4-1`, zone `us-central1-c`, project `cs229-497921`
 
 ## Setup
 
-### 1. Create the droplet
+### 1. Download the model on the VM
 
 ```bash
-# Via doctl CLI
-doctl compute droplet create gpt1900-server \
-  --size gpu-h100x1-80gb \
-  --image ubuntu-22-04-x64 \
-  --region nyc3 \
-  --ssh-keys <your-key-id>
-```
+gcloud compute ssh gpu-l4-1 --zone=us-central1-c --project=cs229-497921
 
-Or use the DigitalOcean web console. Select a GPU Droplet under "All Droplets".
-
-### 2. Install dependencies on the droplet
-
-```bash
-ssh root@<droplet-ip>
-
-# Clone the GPT-1900 repo
-git clone https://github.com/michaelhla/gpt1900.git
-cd gpt1900
+# On the VM:
+git clone https://github.com/michaelhla/gpt1900.git ~/gpt1900
+cd ~/gpt1900
 uv sync --extra gpu
 source .venv/bin/activate
 
-# Download the model (chat.sh handles this)
-bash runs/chat.sh --download-only
-
-# Install the server deps
-pip install fastapi uvicorn httpx
+# Download model weights to a separate directory
+NANOCHAT_BASE_DIR=$HOME/gpt1900_models bash ~/gpt1900/runs/chat.sh --download-only
 ```
 
-### 3. Clone this project and start the server
+### 2. Copy the server to the VM
 
 ```bash
-git clone https://github.com/<your-org>/cs153-project.git
-cd cs153-project
-python deploy/server.py --model-dir /root/gpt1900 --port 8000
+gcloud compute scp deploy/server.py gpu-l4-1:~/cs153_server.py \
+  --zone=us-central1-c --project=cs229-497921
 ```
 
-### 4. Run eval from your local machine
+### 3. Start the server on the VM
 
 ```bash
-python eval/runner.py \
-  --scientist-url http://<droplet-ip>:8000 \
-  --eval eval/eval_set.json \
-  --out results/runs/
+gcloud compute ssh gpu-l4-1 --zone=us-central1-c --project=cs229-497921
+
+# On the VM:
+python ~/cs153_server.py \
+  --model-dir ~/gpt1900 \
+  --model-files-dir ~/gpt1900_models/gpt1900-instruct-v3-sft \
+  --host 127.0.0.1 \
+  --port 8000
 ```
 
-### 5. Destroy the droplet when done
+### 4. Open the SSH tunnel locally (keep this running)
 
 ```bash
-doctl compute droplet delete gpt1900-server
+gcloud compute ssh gpu-l4-1 --zone=us-central1-c --project=cs229-497921 \
+  -- -NL 8000:localhost:8000
+```
+
+The GPT-1900 server is now reachable at `http://localhost:8000` on your local machine.
+
+### 5. Verify the connection
+
+```bash
+curl http://localhost:8000/health
+# → {"status":"ok","model_loaded":"True","device":"cuda"}
+
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"The laws of motion state that", "max_new_tokens": 50}'
 ```
 
 ## Server API
 
-`server.py` exposes a single endpoint:
+`server.py` exposes two endpoints:
 
 ```
+GET /health
+→ {"status": "ok", "model_loaded": "True", "device": "cuda"}
+
 POST /generate
 Content-Type: application/json
-
 {
-  "prompt": "<full prompt string>",
-  "temperature": 0.7,
-  "top_k": 50,
-  "max_new_tokens": 512
+  "prompt":         "<full prompt string>",
+  "temperature":    0.6,
+  "top_k":          20,
+  "max_new_tokens": 256,
+  "stop_sequences": ["\nEND", " END"]   # optional; trimmed server-side
 }
-
-→ { "text": "<generated text>" }
+→ {"text": "<generated text>"}
 ```
 
 ## Notes
 
-- The nanochat generate loop runs on a single H100/L40S. Latency per turn is
-  typically 2–5 seconds for 512 tokens.
-- The server is intentionally minimal — no batching, no streaming. Batching
-  is not needed for sequential eval turns.
-- Set `CUDA_VISIBLE_DEVICES=0` if the droplet has multiple GPUs.
+- Latency per turn is typically 5–15 seconds for 256 tokens on the L4.
+- The server binds to `127.0.0.1` only; the SSH tunnel exposes it locally.
+- Repetition detection and stop-sequence trimming run server-side before the
+  response is returned, so the client always receives clean text.
+- Set `CUDA_VISIBLE_DEVICES=0` if the instance has multiple GPUs.

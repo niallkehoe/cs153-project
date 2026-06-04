@@ -25,13 +25,34 @@ See CONCERNS in README.md:
 
 from __future__ import annotations
 
+import json as _json
 import re
+import time as _time
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any
 
+from agents.llm_client import DEFAULT_MODEL, call_llm
 from agents.simulator import SimulatorAgent
 from tools.schema import ConcludeArgs
+
+_PROSE_PARSE_PROMPT = """\
+A Victorian natural philosopher is investigating a scientific question. Read their latest response and classify it.
+
+Response:
+{text}
+
+Classify as exactly one of:
+- "experiment" — the scientist is proposing a specific experiment to run
+- "conclude"   — the scientist is stating a final conclusion or hypothesis
+- "thinking"   — the scientist is reasoning but not ready to propose or conclude yet
+
+If "experiment": provide a concise description of the proposed experiment (what to measure and how).
+If "conclude": provide the hypothesis text and a confidence level (high / medium / low).
+
+Reply with ONLY valid JSON (no commentary):
+{{"action": "experiment"|"conclude"|"thinking", "description": "...", "hypothesis": "...", "confidence": "high"|"medium"|"low"}}
+"""
 
 
 class LoopAction(Enum):
@@ -82,47 +103,85 @@ class ToolRouter:
 
     def dispatch(self, raw_generation: str) -> RouterResult:
         """
-        Parse the scientist's generation and dispatch the tool call.
+        Parse the scientist's generation and dispatch the appropriate action.
 
-        Parameters
-        ----------
-        raw_generation:
-            Full text output from the ScientistAgent for a single turn.
-
-        Returns
-        -------
-        RouterResult
-            Action and payload for the orchestrator to act on.
+        Tries the legacy TOOL: ... END block first (in case the model does emit
+        one). Falls back to LLM-based prose classification for natural language
+        responses, which is the expected mode for GPT-1900.
         """
         if self._turn_count >= self.max_turns:
             return RouterResult(action=LoopAction.STOP, payload=raw_generation)
 
+        # Legacy: structured TOOL: block (kept as a fast path)
         match = self.TOOL_BLOCK_PATTERN.search(raw_generation)
-        if match is None:
-            return RouterResult(
-                action=LoopAction.REPROMPT,
-                payload=(
-                    "Your response did not contain a valid tool call. "
-                    "Please use TOOL: propose_experiment or TOOL: conclude."
-                ),
-            )
+        if match:
+            tool_name = match.group("name").lower()
+            body = match.group("body")
+            if tool_name == "propose_experiment":
+                return self._handle_propose(body)
+            if tool_name == "conclude":
+                return self._handle_conclude(body)
 
-        tool_name = match.group("name").lower()
-        body = match.group("body")
-
-        if tool_name == "propose_experiment":
-            return self._handle_propose(body)
-        if tool_name == "conclude":
-            return self._handle_conclude(body)
-
-        return RouterResult(
-            action=LoopAction.REPROMPT,
-            payload=f"Unknown tool '{tool_name}'. Available tools: propose_experiment, conclude.",
-        )
+        # Primary: LLM prose classifier
+        return self._parse_prose(raw_generation)
 
     # ------------------------------------------------------------------
     # Private dispatch helpers
     # ------------------------------------------------------------------
+
+    def _parse_prose(self, text: str) -> RouterResult:
+        """
+        Use a modern LLM to classify the scientist's natural language response.
+
+        Returns CONTINUE (run experiment), STOP (conclude), or REPROMPT.
+        """
+        from tools.schema import ConfidenceLevel
+
+        try:
+            prompt = _PROSE_PARSE_PROMPT.format(text=text[:1500])
+            raw = call_llm(DEFAULT_MODEL, prompt, max_tokens=256)
+
+            json_match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if json_match:
+                data = _json.loads(json_match.group())
+                action = data.get("action", "thinking")
+
+                # #region agent log H7 - LLM parse result
+                _dbg = {"sessionId":"4c613c","hypothesisId":"H7","location":"router.py:_parse_prose","message":"llm-classify","data":{"action":action,"description":data.get("description","")[:200],"hypothesis":data.get("hypothesis","")[:200],"confidence":data.get("confidence","")},"timestamp":int(_time.time()*1000)}
+                with open("/Users/niall/Dev/cs153-project/.cursor/debug-4c613c.log","a") as _f: _f.write(_json.dumps(_dbg)+"\n")
+                # #endregion
+
+                if action == "experiment":
+                    self._turn_count += 1
+                    description = data.get("description", text[:400])
+                    result = self.simulator.run_experiment(description, {})
+                    message = self._format_experiment_result(result)
+                    return RouterResult(action=LoopAction.CONTINUE, payload=message)
+
+                if action == "conclude":
+                    confidence_str = data.get("confidence", "medium").strip().lower()
+                    try:
+                        confidence = ConfidenceLevel(confidence_str)
+                    except ValueError:
+                        confidence = ConfidenceLevel.MEDIUM
+                    return RouterResult(
+                        action=LoopAction.STOP,
+                        payload=ConcludeArgs(
+                            hypothesis=data.get("hypothesis", text[:800]),
+                            confidence=confidence,
+                        ),
+                    )
+
+        except Exception as exc:
+            # #region agent log H7 - parse error
+            _dbg_err = {"sessionId":"4c613c","hypothesisId":"H7","location":"router.py:_parse_prose","message":"parse-error","data":{"error":str(exc)[:200]},"timestamp":int(_time.time()*1000)}
+            with open("/Users/niall/Dev/cs153-project/.cursor/debug-4c613c.log","a") as _f: _f.write(_json.dumps(_dbg_err)+"\n")
+            # #endregion
+
+        return RouterResult(
+            action=LoopAction.REPROMPT,
+            payload="Please describe a specific experiment you wish to conduct, or state your conclusions if you have gathered sufficient evidence.",
+        )
 
     def _handle_propose(self, body: str) -> RouterResult:
         """Parse propose_experiment args, call the simulator, format the result."""

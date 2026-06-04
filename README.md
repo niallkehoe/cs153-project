@@ -38,9 +38,9 @@ EvalSet (question + ground_truth)
 
 | Agent | Model | Role |
 |---|---|---|
-| Scientist | GPT-1900 (DigitalOcean GPU) | Proposes experiments, interprets results, concludes |
-| Simulator | Cloudflare Workers AI | Returns raw observational data with configurable noise |
-| Judge | Cloudflare Workers AI | Scores final hypothesis against ground truth with partial credit |
+| Scientist | GPT-1900 (GCP GPU — NVIDIA L4 via SSH tunnel) | Proposes experiments in natural language, interprets results, concludes |
+| Simulator | OpenRouter (default: `anthropic/claude-3.5-haiku`) | Returns raw observational data with configurable noise |
+| Judge | OpenRouter (default: `anthropic/claude-3.5-haiku`) | Scores final hypothesis against ground truth with partial credit |
 
 ---
 
@@ -52,7 +52,8 @@ cs153-project/
 ├── tools/          # Tool schema definitions and call router
 ├── prompts/        # System prompt templates for each agent
 ├── eval/           # Eval set, orchestration loop, results
-├── deploy/         # DigitalOcean GPU server setup for GPT-1900
+├── deploy/         # GCP GPU server setup for GPT-1900
+├── web/            # FastAPI server + single-page frontend (live SSE pipeline)
 └── results/        # Per-run JSONL output files
 ```
 
@@ -63,25 +64,31 @@ cs153-project/
 ```bash
 # 1. Install dependencies
 pip install -r requirements.txt
+pip install -r web/requirements.txt
 
 # 2. Set credentials
 cp .env.example .env
-# Fill in CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, and SCIENTIST_API_URL
+# Fill in OPEN_ROUTER_API_KEY and SCIENTIST_API_URL
 
-# 3. Run eval against a hosted GPT-1900 instance
+# 3. Open the SSH tunnel to the GCP GPU instance (keep this running)
+gcloud compute ssh gpu-l4-1 --zone=us-central1-c --project=cs229-497921 -- -NL 8000:localhost:8000
+
+# 4. Launch the web UI (separate terminal)
+mamba activate sylvian
+uvicorn web.server:app --reload --port 7860
+# Then open http://127.0.0.1:7860
+
+# 5. Or run the batch eval pipeline directly
 python eval/runner.py \
-  --scientist-url http://<droplet-ip>:8000 \
+  --scientist-url http://localhost:8000 \
   --eval eval/eval_set.json \
   --out results/runs/
 
-# 4. (Optional) Override the Cloudflare model
-python eval/runner.py \
-  --scientist-url http://<droplet-ip>:8000 \
-  --judge-model @cf/meta/llama-3.1-8b-instruct-fast \
-  --simulator-model @cf/meta/llama-3.1-8b-instruct-fast
-
-# 5. Spin up the GPT-1900 server on DigitalOcean — see deploy/README.md
-python deploy/server.py --model-dir /path/to/gpt1900
+# 6. Start the GPT-1900 server on the GCP VM (run on the VM)
+python ~/cs153_server.py \
+  --model-dir ~/gpt1900 \
+  --model-files-dir ~/gpt1900_models/gpt1900-instruct-v3-sft \
+  --host 127.0.0.1 --port 8000
 ```
 
 ---
@@ -126,4 +133,5 @@ A scientist that converges in 2 experiments vs. one that meanders for 20 are mea
 
 ## AI Usage policy
 
-I used 
+I used AI coding tools to construct the harness for the agents (scientist, simulator, and judge).
+I also used AI agents to build the frontend for the website.

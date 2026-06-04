@@ -6,31 +6,33 @@ LLM wrappers for the three roles in the pipeline. Each agent is responsible for 
 
 | File | Role | Backing model |
 |---|---|---|
-| `scientist.py` | ScientistAgent | GPT-1900 (self-hosted on DigitalOcean GPU) |
-| `simulator.py` | SimulatorAgent | Cloudflare Workers AI |
-| `judge.py` | JudgeAgent | Cloudflare Workers AI |
+| `scientist.py` | ScientistAgent | GPT-1900 (self-hosted on GCP, NVIDIA L4 via SSH tunnel) |
+| `simulator.py` | SimulatorAgent | OpenRouter (default: `anthropic/claude-3.5-haiku`) |
+| `judge.py` | JudgeAgent | OpenRouter (default: `anthropic/claude-3.5-haiku`) |
 | `llm_client.py` | shared HTTP client | — |
 
 ## LLM Client (`llm_client.py`)
 
-Both the simulator and judge call Cloudflare Workers AI through a single shared `call_llm(model, prompt)` function in `llm_client.py`. This avoids vendor SDK dependencies — only `httpx` (already required for the scientist client) is needed.
+Both the simulator and judge call OpenRouter through a single shared `call_llm(model, prompt)` function in `llm_client.py`. OpenRouter exposes an OpenAI-compatible API, so only `httpx` is needed.
 
-Required environment variables:
+Required environment variable:
 ```
-CLOUDFLARE_ACCOUNT_ID=...
-CLOUDFLARE_API_TOKEN=...    # needs "Workers AI Run" permission
+OPEN_ROUTER_API_KEY=sk-or-v1-...
 ```
 
-The default model is `@cf/meta/llama-3.3-70b-instruct-fp8-fast`. Any model from the [Cloudflare Workers AI catalogue](https://developers.cloudflare.com/workers-ai/models/) can be passed at runtime via `--judge-model` / `--simulator-model`.
+The default model is `anthropic/claude-3.5-haiku`. Any model from the [OpenRouter catalogue](https://openrouter.ai/models) can be used by setting `SIMULATOR_MODEL` / `JUDGE_MODEL` in `.env`.
 
 ## Scientist Agent
 
-The scientist drives the experiment loop. It receives the opening research question and the tool schema, then iteratively generates either a `propose_experiment` tool call (requesting data) or a `conclude` tool call (ending the loop with a hypothesis).
+The scientist drives the experiment loop. It receives the opening research question and writes natural language prose describing experiments it wants to run. The `ToolRouter` uses a modern LLM to classify each response and dispatch accordingly.
 
 **Key design constraints:**
-- Temperature `0.7`, `top_k=50` — matches Hla's physics eval settings
-- Context is maintained across turns; older experiment results are compressed to one-line summaries once context approaches the 2048-token limit
-- The backing HTTP client points at the DigitalOcean `/generate` endpoint (see `deploy/server.py`)
+- Temperature `0.6`, `top_k=20` — tighter sampling to reduce degeneration
+- GPT-1900 uses a chat template with special tokens (`<|user_start|>`, `<|user_end|>`, `<|assistant_start|>`, `<|assistant_end|>`); `_build_prompt()` uses these instead of plain `USER:` / `ASSISTANT:` markers
+- Special tokens are stripped from responses before storing in context, preventing format pollution across turns
+- Repetition detection truncates degenerate "A. B. C." loops at the client
+- Context is maintained across turns; older experiment results are compressed once context approaches the 2048-token limit
+- The backing HTTP client points at `SCIENTIST_API_URL` (default `http://localhost:8000`) — keep the GCP SSH tunnel open (see `deploy/README.md`)
 
 ## Simulator Agent
 

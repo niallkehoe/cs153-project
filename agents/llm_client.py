@@ -1,28 +1,26 @@
 """
 llm_client.py
 -------------
-Shared HTTP client for Cloudflare Workers AI.
+Shared HTTP client for OpenRouter.
 
 All modern-LLM calls in the pipeline (SimulatorAgent, JudgeAgent) route
-through this module. Using Cloudflare Workers AI means no dependency on
-vendor-specific SDKs — only ``httpx`` (already required for the scientist
-client) and two environment variables.
+through this module. OpenRouter exposes an OpenAI-compatible API, so only
+``httpx`` and one environment variable are required.
 
 Required environment variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  CLOUDFLARE_ACCOUNT_ID  — your Cloudflare account ID
-  CLOUDFLARE_API_TOKEN   — an API token with "Workers AI" read/run permissions
+  OPEN_ROUTER_API_KEY  — your OpenRouter API key
 
 Available models
 ~~~~~~~~~~~~~~~~
-Pass any Cloudflare Workers AI model identifier as the ``model`` argument.
+Pass any OpenRouter model identifier as the ``model`` argument.
 Recommended defaults:
 
-  @cf/meta/llama-3.3-70b-instruct-fp8-fast   (fast, high quality)
-  @cf/meta/llama-3.1-8b-instruct-fast         (cheaper, lower latency)
-  @cf/mistral/mistral-7b-instruct-v0.2        (alternative)
+  anthropic/claude-3.5-haiku          (fast, high quality — pipeline default)
+  openai/gpt-4o-mini                  (cheaper, lower latency)
+  meta-llama/llama-3.3-70b-instruct   (open-source alternative)
 
-Full model catalogue: https://developers.cloudflare.com/workers-ai/models/
+Full model catalogue: https://openrouter.ai/models
 """
 
 from __future__ import annotations
@@ -31,8 +29,8 @@ import os
 
 import httpx
 
-CLOUDFLARE_API_BASE = "https://api.cloudflare.com/client/v4/accounts"
-DEFAULT_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+OPENROUTER_API_BASE = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_MODEL = "anthropic/claude-3.5-haiku"
 
 # Shared httpx client — reused across calls to amortise connection overhead
 _http_client: httpx.Client | None = None
@@ -41,7 +39,7 @@ _http_client: httpx.Client | None = None
 def _get_client() -> httpx.Client:
     global _http_client
     if _http_client is None or _http_client.is_closed:
-        _http_client = httpx.Client(timeout=60.0)
+        _http_client = httpx.Client(timeout=120.0)
     return _http_client
 
 
@@ -53,19 +51,16 @@ def call_llm(
     max_tokens: int = 1024,
 ) -> str:
     """
-    Call a Cloudflare Workers AI model and return the response text.
+    Call an OpenRouter model and return the response text.
 
     Parameters
     ----------
     model:
-        Cloudflare Workers AI model identifier, e.g.
-        ``"@cf/meta/llama-3.3-70b-instruct-fp8-fast"``.
+        OpenRouter model identifier, e.g. ``"anthropic/claude-3.5-haiku"``.
     prompt:
         The user-role message content.
     system:
         Optional system-role message prepended before the user message.
-        Use this to pass static role instructions separately from the
-        dynamic per-call content.
     max_tokens:
         Maximum number of tokens to generate.
 
@@ -77,31 +72,25 @@ def call_llm(
     Raises
     ------
     KeyError
-        If ``CLOUDFLARE_ACCOUNT_ID`` or ``CLOUDFLARE_API_TOKEN`` are not set.
+        If ``OPEN_ROUTER_API_KEY`` is not set.
     httpx.HTTPStatusError
         If the API returns a non-2xx status.
-    RuntimeError
-        If the API returns ``success: false``.
     """
-    account_id = os.environ["CLOUDFLARE_ACCOUNT_ID"]
-    api_token = os.environ["CLOUDFLARE_API_TOKEN"]
+    api_key = os.environ["OPEN_ROUTER_API_KEY"]
 
     messages: list[dict[str, str]] = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
 
-    url = f"{CLOUDFLARE_API_BASE}/{account_id}/ai/run/{model}"
     response = _get_client().post(
-        url,
-        headers={"Authorization": f"Bearer {api_token}"},
-        json={"messages": messages, "max_tokens": max_tokens},
+        OPENROUTER_API_BASE,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "https://github.com/cs153-project",
+        },
+        json={"model": model, "messages": messages, "max_tokens": max_tokens},
     )
     response.raise_for_status()
 
-    data: dict = response.json()
-    if not data.get("success"):
-        errors = data.get("errors", [])
-        raise RuntimeError(f"Cloudflare Workers AI error: {errors}")
-
-    return data["result"]["response"]
+    return response.json()["choices"][0]["message"]["content"]

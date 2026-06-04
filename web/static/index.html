@@ -741,16 +741,9 @@
     </div>
 
     <div class="sidebar-section">
-      <div class="sidebar-label">Playback</div>
-      <div class="control-group">
-        <div class="control-label">
-          <span>Speed</span>
-          <span id="speed-val">1×</span>
-        </div>
-        <input type="range" class="slider" id="speed-slider" min="1" max="5" value="2" step="1" />
-      </div>
-      <button class="btn btn-demo" id="btn-demo">▶ Run Demo</button>
-      <button class="btn btn-ghost" id="btn-reset" disabled>↺ Reset</button>
+      <div class="sidebar-label">Controls</div>
+      <button class="btn btn-demo" id="btn-run" disabled>▶ Begin Investigation</button>
+      <button class="btn btn-ghost" id="btn-stop" disabled>■ Stop</button>
     </div>
 
     <div class="sidebar-section">
@@ -774,7 +767,7 @@
       <div id="empty-state">
         <div class="empty-glyph">⚗</div>
         <div class="empty-text">
-          Choose an investigation from the left panel, then press <em>Run Demo</em> to observe the experiment loop unfold.
+          Choose an investigation from the left panel, then press <em>Begin Investigation</em> to run the live experiment pipeline.
         </div>
       </div>
     </div>
@@ -845,24 +838,19 @@
 // State
 // ─────────────────────────────────────────────────────────────────
 const state = {
-  scenarios: [],
-  selectedId: null,
-  demoData: null,
-  playing: false,
-  turnIndex: 0,
-  playTimer: null,
-  expCount: 0,
-  turnCount: 0,
-  finalScore: null,
-  finalConf: null,
-  maxTurns: 10,
-  timeline: [],
+  scenarios:   [],
+  selectedId:  null,
+  running:     false,
+  eventSource: null,
+  expCount:    0,
+  turnCount:   0,
+  finalScore:  null,
+  finalConf:   null,
+  maxTurns:    10,
 };
 
-// Speed map: slider value → ms delay between turns
-const SPEED_MAP = { 1: 3200, 2: 1800, 3: 900, 4: 400, 5: 80 };
-// Typing speed: chars per interval tick
-const TYPE_SPEED_MAP = { 1: 4, 2: 8, 3: 18, 4: 50, 5: 999 };
+// Typing speed: chars rendered per 16ms tick
+const TYPE_CHARS = 24;
 
 // ─────────────────────────────────────────────────────────────────
 // DOM refs
@@ -870,12 +858,9 @@ const TYPE_SPEED_MAP = { 1: 4, 2: 8, 3: 18, 4: 50, 5: 999 };
 const $feed            = document.getElementById('feed');
 const $feedTitle       = document.getElementById('feed-title');
 const $feedDomain      = document.getElementById('feed-domain');
-const $emptyState      = document.getElementById('empty-state');
 const $scenarioList    = document.getElementById('scenario-list');
-const $btnDemo         = document.getElementById('btn-demo');
-const $btnReset        = document.getElementById('btn-reset');
-const $speedSlider     = document.getElementById('speed-slider');
-const $speedVal        = document.getElementById('speed-val');
+const $btnRun          = document.getElementById('btn-run');
+const $btnStop         = document.getElementById('btn-stop');
 const $globalStatus    = document.getElementById('global-status');
 const $globalStatusTxt = document.getElementById('global-status-text');
 const $agentStatus     = document.getElementById('agent-status');
@@ -901,9 +886,6 @@ function escHtml(s) {
     .replace(/>/g,'&gt;');
 }
 
-function speedMs() { return SPEED_MAP[+$speedSlider.value] || 1800; }
-function typeChars() { return TYPE_SPEED_MAP[+$speedSlider.value] || 8; }
-
 function setGlobalStatus(cls, text) {
   $globalStatus.className = `status-badge status-${cls}`;
   $globalStatusTxt.textContent = text;
@@ -928,7 +910,6 @@ function updateStats() {
 function addTimelineEntry(type, text) {
   const empty = $timeline.querySelector('[style]');
   if (empty) empty.remove();
-
   const dotClass = type === 'exp' ? 'dot-exp' : type === 'fail' ? 'dot-fail' : 'dot-conclude';
   const el = document.createElement('div');
   el.className = 'timeline-entry';
@@ -944,11 +925,10 @@ function scrollFeedBottom() {
 // Typing animation
 // ─────────────────────────────────────────────────────────────────
 async function typeInto(el, text) {
-  const chunkSize = typeChars();
   el.classList.add('typing-cursor');
-  for (let i = 0; i < text.length; i += chunkSize) {
-    if (!state.playing) { el.textContent = text; break; }
-    el.textContent = text.slice(0, i + chunkSize);
+  for (let i = 0; i < text.length; i += TYPE_CHARS) {
+    if (!state.running) { el.textContent = text; break; }
+    el.textContent = text.slice(0, i + TYPE_CHARS);
     scrollFeedBottom();
     await sleep(16);
   }
@@ -959,13 +939,12 @@ async function typeInto(el, text) {
 // ─────────────────────────────────────────────────────────────────
 // Turn renderers
 // ─────────────────────────────────────────────────────────────────
-function makeTurnShell(avatarClass, avatarLabel, agentClass, agentLabel) {
+function makeTurnShell(avatarClass, agentClass, agentLabel) {
   const wrap = document.createElement('div');
   wrap.className = 'turn';
 
   const avatar = document.createElement('div');
   avatar.className = `turn-avatar ${avatarClass}`;
-  avatar.textContent = avatarLabel;
 
   const body = document.createElement('div');
   body.className = 'turn-body';
@@ -987,146 +966,111 @@ function makeTurnShell(avatarClass, avatarLabel, agentClass, agentLabel) {
   return content;
 }
 
-async function renderQuestion(turn) {
+async function renderQuestion(ev) {
   setAgentStatus('idle', 'posing question');
-  const content = makeTurnShell('avatar-question', 'Q', 'agent-question', 'Research Question');
-  await typeInto(content, turn.question || '');
+  const content = makeTurnShell('avatar-question', 'agent-question', 'Research Question');
+  await typeInto(content, ev.content || '');
 }
 
-async function renderScientist(turn, turnIdx) {
+async function renderScientist(ev) {
   state.turnCount++;
   setAgentStatus('thinking', 'GPT-1900 thinking');
   setGlobalStatus('thinking', 'GPT-1900');
   updateStats();
 
-  const content = makeTurnShell('avatar-scientist', 'GPT', 'agent-scientist', 'GPT-1900 Scientist');
+  const content = makeTurnShell('avatar-scientist', 'agent-scientist', 'GPT-1900 Scientist');
+  if (ev.prose) await typeInto(content, ev.prose);
 
-  const prose = extractProse(turn.content);
-  if (prose) await typeInto(content, prose);
-
-  if (turn.tool_call) {
-    const toolEl = buildToolCallEl(turn.tool_call);
+  if (ev.tool_name) {
+    const toolEl = buildToolCallEl(ev.tool_name, ev.tool_body || '');
     content.parentElement.appendChild(toolEl);
     scrollFeedBottom();
   }
-
-  await sleep(speedMs() * 0.4);
 }
 
-async function renderSimulator(turn) {
+async function renderConclude(ev) {
+  // Update stats only — the scientist event already rendered the tool block
+  state.finalConf = ev.confidence || '—';
+  addTimelineEntry('conclude', 'Conclusion reached');
+  updateStats();
+}
+
+async function renderSimulator(ev) {
   setAgentStatus('running', 'Simulator running');
   setGlobalStatus('running', 'Simulator');
   state.expCount++;
   updateStats();
 
   addTimelineEntry(
-    turn.success ? 'exp' : 'fail',
-    `Exp. ${turn.experiment_number}: ${turn.success ? 'success' : 'FAILURE'}`
+    ev.success ? 'exp' : 'fail',
+    `Exp. ${ev.experiment_number}: ${ev.success ? 'success' : 'FAILURE'}`
   );
 
-  const content = makeTurnShell('avatar-simulator', 'SIM', 'agent-simulator', 'Simulator');
+  const content = makeTurnShell('avatar-simulator', 'agent-simulator', 'Simulator');
 
   const wrapper = document.createElement('div');
-  wrapper.className = `sim-block${turn.success ? '' : ' sim-failure'}`;
-  const expLabel = `Experiment ${turn.experiment_number}`;
+  wrapper.className = `sim-block${ev.success ? '' : ' sim-failure'}`;
   wrapper.innerHTML = `
     <div class="sim-header">
       <div class="sim-icon"></div>
-      <div class="sim-label">${escHtml(expLabel)} — ${turn.success ? 'Observations' : 'Laboratory Difficulty'}</div>
+      <div class="sim-label">${escHtml(`Experiment ${ev.experiment_number}`)} — ${ev.success ? 'Observations' : 'Laboratory Difficulty'}</div>
     </div>
     <div class="sim-content"></div>
   `;
   content.parentElement.appendChild(wrapper);
 
   const simContent = wrapper.querySelector('.sim-content');
-  await typeInto(simContent, turn.content);
+  await typeInto(simContent, ev.content || '');
   scrollFeedBottom();
-  await sleep(speedMs() * 0.3);
 }
 
-async function renderConclusion(turn) {
-  setAgentStatus('thinking', 'GPT-1900 concluding');
-  setGlobalStatus('thinking', 'concluding');
-  state.turnCount++;
-  state.finalConf = turn.tool_call?.confidence || '—';
-  updateStats();
-
-  addTimelineEntry('conclude', 'Conclusion reached');
-
-  const content = makeTurnShell('avatar-scientist', 'GPT', 'agent-scientist', 'GPT-1900 Scientist');
-
-  const prose = extractProse(turn.content);
-  if (prose) await typeInto(content, prose);
-
-  if (turn.tool_call) {
-    const toolEl = buildToolCallEl(turn.tool_call);
-    content.parentElement.appendChild(toolEl);
-    scrollFeedBottom();
-  }
-
-  await sleep(speedMs() * 0.5);
-}
-
-async function renderJudge(turn) {
+async function renderJudge(ev) {
   setAgentStatus('scoring', 'Judge evaluating');
   setGlobalStatus('scoring', 'Evaluator');
-  state.finalScore = turn.score?.total ?? null;
+  state.finalScore = ev.score?.total ?? null;
   updateStats();
 
-  const content = makeTurnShell('avatar-judge', 'JDG', 'agent-judge', 'Evaluator');
-
-  const judgeEl = buildJudgeCard(turn.score);
+  const content = makeTurnShell('avatar-judge', 'agent-judge', 'Evaluator');
+  const judgeEl = buildJudgeCard(ev.score);
   content.parentElement.appendChild(judgeEl);
   scrollFeedBottom();
-  await sleep(speedMs() * 0.2);
+}
+
+function renderReprompt(ev) {
+  // Brief inline notice that the model missed a tool call
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'padding:6px 28px;font-family:var(--mono);font-size:0.62rem;color:var(--ink3);border-bottom:1px solid var(--line);';
+  wrap.textContent = '⚠ model output did not contain a valid tool call — re-prompting';
+  $feed.appendChild(wrap);
+  scrollFeedBottom();
+}
+
+function renderError(ev) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'padding:14px 28px;font-family:var(--mono);font-size:0.78rem;color:#c07070;border-bottom:1px solid var(--line);background:rgba(136,64,64,0.07);';
+  wrap.innerHTML = `<strong>Pipeline error:</strong> ${escHtml(ev.message || 'unknown error')}`;
+  $feed.appendChild(wrap);
+  scrollFeedBottom();
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Build tool call element
 // ─────────────────────────────────────────────────────────────────
-function buildToolCallEl(tool) {
-  const isConclude = tool.name === 'conclude';
+function buildToolCallEl(toolName, toolBody) {
+  const isConclude = toolName === 'conclude';
   const el = document.createElement('div');
   el.className = `tool-block${isConclude ? ' tool-conclude' : ''}`;
 
-  let bodyHtml = '';
-
-  if (isConclude) {
-    bodyHtml = `
-      <div class="tool-field">
-        <div class="tool-field-label">Hypothesis</div>
-        <div class="tool-field-value">${escHtml(tool.hypothesis || '')}</div>
-      </div>
-      <div class="tool-field">
-        <div class="tool-field-label">Confidence</div>
-        <div class="tool-field-value">${escHtml(tool.confidence || '')}</div>
-      </div>
-    `;
-  } else {
-    const params = tool.parameters || {};
-    const paramsHtml = Object.keys(params).length ? `
-      <div class="tool-params">
-        ${Object.entries(params).map(([k,v]) => `
-          <div class="param-row"><span class="param-key">${escHtml(k)}:</span><span class="param-val">${escHtml(v)}</span></div>
-        `).join('')}
-      </div>
-    ` : '';
-
-    bodyHtml = `
-      <div class="tool-field">
-        <div class="tool-field-label">Description</div>
-        <div class="tool-field-value">${escHtml(tool.description || '')}</div>
-      </div>
-      ${paramsHtml ? `<div class="tool-field"><div class="tool-field-label">Parameters</div>${paramsHtml}</div>` : ''}
-    `;
-  }
-
   el.innerHTML = `
     <div class="tool-header">
-      <div class="tool-name">TOOL: ${escHtml(tool.name)}</div>
-      <div class="tool-chip">${isConclude ? 'CONCLUDE' : 'PROPOSE_EXPERIMENT'}</div>
+      <div class="tool-name">TOOL: ${escHtml(toolName)}</div>
+      <div class="tool-chip">${escHtml(isConclude ? 'CONCLUDE' : 'PROPOSE_EXPERIMENT')}</div>
     </div>
-    <div class="tool-body">${bodyHtml}</div>
+    <div class="tool-body">
+      <div class="tool-field">
+        <div class="tool-field-value">${escHtml(toolBody)}</div>
+      </div>
+    </div>
   `;
   return el;
 }
@@ -1142,10 +1086,10 @@ function buildJudgeCard(score) {
   const pips = [1,2,3,4].map(i => `<div class="pip ${i <= total ? 'pip-filled' : 'pip-empty'}"></div>`).join('');
 
   const criteria = [
-    ['phenomenon_identified', 'Phenomenon identified'],
-    ['qualitative_mechanism', 'Qualitative mechanism'],
-    ['quantitative_form',    'Quantitative form'],
-    ['confidence_calibrated','Confidence calibrated'],
+    ['phenomenon',            'Phenomenon identified'],
+    ['mechanism',             'Qualitative mechanism'],
+    ['quantitative',          'Quantitative form'],
+    ['confidence_calibrated', 'Confidence calibrated'],
   ];
 
   const criteriaHtml = criteria.map(([key, label]) => {
@@ -1171,93 +1115,84 @@ function buildJudgeCard(score) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Extract prose (text before TOOL: block)
+// Live run via SSE
 // ─────────────────────────────────────────────────────────────────
-function extractProse(content) {
-  if (!content) return '';
-  const idx = content.indexOf('TOOL:');
-  const prose = idx > 0 ? content.slice(0, idx).trim() : content.trim();
-  return prose;
-}
+function runLive() {
+  if (!state.selectedId || state.running) return;
 
-// ─────────────────────────────────────────────────────────────────
-// Main playback loop
-// ─────────────────────────────────────────────────────────────────
-async function playDemo() {
-  if (!state.demoData) return;
-  state.playing = true;
-  $btnDemo.disabled = true;
-  $btnReset.disabled = false;
+  state.running = true;
+  state.expCount = 0;
+  state.turnCount = 0;
+  state.finalScore = null;
+  state.finalConf = null;
 
   $feed.innerHTML = '';
-  state.turnCount = 0;
-  state.expCount  = 0;
-  state.finalScore = null;
-  state.finalConf  = null;
   $timeline.innerHTML = '<div style="font-size:0.8rem;color:var(--ink3);font-style:italic;">No experiments yet</div>';
   updateStats();
-
   setGlobalStatus('thinking', 'starting');
 
-  const data = state.demoData;
-  const turns = data.turns;
+  $btnRun.disabled = true;
+  $btnStop.disabled = false;
 
-  await renderQuestion({ question: data.question });
-  await sleep(speedMs());
+  const es = new EventSource(`/api/run/${state.selectedId}`);
+  state.eventSource = es;
 
-  for (let i = 0; i < turns.length && state.playing; i++) {
-    const turn = turns[i];
+  es.onmessage = async (e) => {
+    const ev = JSON.parse(e.data);
 
-    if (turn.type === 'scientist') {
-      if (turn.tool_call?.name === 'conclude') {
-        await renderConclusion(turn);
-      } else {
-        await renderScientist(turn, i);
-      }
-      await sleep(speedMs());
+    if (ev.type === 'question')   { await renderQuestion(ev); }
+    else if (ev.type === 'scientist') { await renderScientist(ev); }
+    else if (ev.type === 'conclude')  { await renderConclude(ev); }
+    else if (ev.type === 'simulator') { await renderSimulator(ev); }
+    else if (ev.type === 'judge')     { await renderJudge(ev); }
+    else if (ev.type === 'reprompt')  { renderReprompt(ev); }
+    else if (ev.type === 'error')     { renderError(ev); finishRun(false); }
+    else if (ev.type === 'done')      { finishRun(true); }
+  };
+
+  es.onerror = () => {
+    if (state.running) {
+      renderError({ message: 'SSE connection lost' });
+      finishRun(false);
     }
+  };
+}
 
-    else if (turn.type === 'simulator') {
-      await renderSimulator(turn);
-      await sleep(speedMs());
-    }
-
-    else if (turn.type === 'judge') {
-      await renderJudge(turn);
-    }
-  }
-
-  if (state.playing) {
+function finishRun(success) {
+  if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
+  state.running = false;
+  $btnRun.disabled = false;
+  $btnRun.textContent = '▶ Run Again';
+  $btnStop.disabled = true;
+  if (success) {
     setGlobalStatus('done', 'complete');
     setAgentStatus('done', 'evaluation done');
-    $btnDemo.textContent = '▶ Run Again';
-    $btnDemo.disabled = false;
+  } else {
+    setGlobalStatus('idle', 'stopped');
+    setAgentStatus('idle', 'none');
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Reset
-// ─────────────────────────────────────────────────────────────────
-function resetPlayback() {
-  state.playing = false;
-  clearTimeout(state.playTimer);
-  $feed.innerHTML = '<div id="empty-state"><div class="empty-glyph">⚗</div><div class="empty-text">Press <em>Run Demo</em> to begin the investigation.</div></div>';
-  state.turnCount = 0; state.expCount = 0;
+function stopRun() {
+  if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
+  state.running = false;
+  $feed.innerHTML = '<div id="empty-state"><div class="empty-glyph">⚗</div><div class="empty-text">Run stopped. Press <em>Begin Investigation</em> to start again.</div></div>';
+  state.expCount = 0; state.turnCount = 0;
   state.finalScore = null; state.finalConf = null;
   $timeline.innerHTML = '<div style="font-size:0.8rem;color:var(--ink3);font-style:italic;">No experiments yet</div>';
   updateStats();
   setGlobalStatus('idle', 'idle');
   setAgentStatus('idle', 'none');
-  $btnDemo.disabled = !state.selectedId;
-  $btnDemo.textContent = '▶ Run Demo';
-  $btnReset.disabled = true;
+  $btnRun.disabled = false;
+  $btnRun.textContent = '▶ Begin Investigation';
+  $btnStop.disabled = true;
 }
 
 // ─────────────────────────────────────────────────────────────────
 // Scenario selection
 // ─────────────────────────────────────────────────────────────────
-async function selectScenario(id) {
-  if (state.playing) resetPlayback();
+function selectScenario(id) {
+  if (state.running) stopRun();
 
   state.selectedId = id;
   document.querySelectorAll('.scenario-card').forEach(el => {
@@ -1269,22 +1204,16 @@ async function selectScenario(id) {
     $feedTitle.textContent = meta.question;
     $feedTitle.style.fontStyle = 'normal';
     $feedTitle.style.color = 'var(--ink)';
-    $feedDomain.textContent = (meta.domain || '') + (meta.tier ? ' · ' + meta.tier.toUpperCase() : '') + (meta.difficulty ? ' · difficulty ' + '★'.repeat(meta.difficulty) : '');
+    $feedDomain.textContent = (meta.domain || '') +
+      (meta.tier ? ' · ' + meta.tier.toUpperCase() : '') +
+      (meta.difficulty ? ' · difficulty ' + '★'.repeat(meta.difficulty) : '');
     state.maxTurns = meta.max_turns || 10;
     $turnsMax.textContent = state.maxTurns;
   }
 
-  try {
-    const res = await fetch(`/api/demo/${id}`);
-    if (!res.ok) throw new Error('not found');
-    state.demoData = await res.json();
-    $btnDemo.disabled = false;
-  } catch {
-    state.demoData = null;
-    $btnDemo.disabled = true;
-  }
-
-  $feed.innerHTML = '<div id="empty-state"><div class="empty-glyph">⚗</div><div class="empty-text">Press <em>Run Demo</em> to begin the investigation.</div></div>';
+  $btnRun.disabled = false;
+  $btnRun.textContent = '▶ Begin Investigation';
+  $feed.innerHTML = '<div id="empty-state"><div class="empty-glyph">⚗</div><div class="empty-text">Press <em>Begin Investigation</em> to run the live experiment pipeline.</div></div>';
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -1296,13 +1225,12 @@ async function loadScenarios() {
     state.scenarios = await res.json();
   } catch {
     state.scenarios = [
-      { id: 'free_fall_galileo',              tier: 'baseline', domain: 'mechanics',                   difficulty: 1, max_turns: 5,  question: 'Does the rate of fall depend upon the weight of the body?' },
-      { id: 'photoelectric_effect',           tier: 'target',   domain: 'optics / electromagnetism',   difficulty: 3, max_turns: 10, question: 'What property of light determines whether particles are discharged from the metal?' },
-      { id: 'uv_catastrophe',                 tier: 'target',   domain: 'thermodynamics / optics',      difficulty: 4, max_turns: 10, question: 'Which assumption underlying the classical prediction must be incorrect?' },
-      { id: 'special_relativity_michelson_morley', tier: 'stretch', domain: 'electromagnetism / mechanics', difficulty: 5, max_turns: 12, question: 'How can the Michelson-Morley null result be reconciled with Maxwell\'s equations?' },
+      { id: 'free_fall_galileo',                   tier: 'baseline', domain: 'mechanics',                       difficulty: 1, max_turns: 5,  question: 'Does the rate of fall depend upon the weight of the body?' },
+      { id: 'photoelectric_effect',                tier: 'target',   domain: 'optics / electromagnetism',       difficulty: 3, max_turns: 10, question: 'What property of light determines whether particles are discharged from the metal?' },
+      { id: 'uv_catastrophe',                      tier: 'target',   domain: 'thermodynamics / optics',          difficulty: 4, max_turns: 10, question: 'Which assumption underlying the classical prediction must be incorrect?' },
+      { id: 'special_relativity_michelson_morley', tier: 'stretch',  domain: 'electromagnetism / mechanics',    difficulty: 5, max_turns: 12, question: "How can the Michelson-Morley null result be reconciled with Maxwell's equations?" },
     ];
   }
-
   renderScenarioList();
 }
 
@@ -1316,10 +1244,8 @@ function renderScenarioList() {
     const card = document.createElement('div');
     card.className = 'scenario-card';
     card.dataset.id = s.id;
-
     const shortQ = s.question.length > 90 ? s.question.slice(0, 87) + '…' : s.question;
     const stars = s.difficulty ? '★'.repeat(s.difficulty) + '☆'.repeat(5 - s.difficulty) : '';
-
     card.innerHTML = `
       <div class="scenario-name">${escHtml(shortQ)}</div>
       <div class="scenario-meta">
@@ -1335,23 +1261,14 @@ function renderScenarioList() {
 // ─────────────────────────────────────────────────────────────────
 // Event listeners
 // ─────────────────────────────────────────────────────────────────
-$btnDemo.addEventListener('click', () => {
-  if (state.demoData) playDemo();
-});
-
-$btnReset.addEventListener('click', () => resetPlayback());
-
-$speedSlider.addEventListener('input', () => {
-  const v = +$speedSlider.value;
-  const labels = {1:'0.5×', 2:'1×', 3:'2×', 4:'4×', 5:'Max'};
-  $speedVal.textContent = labels[v] || '1×';
-});
+$btnRun.addEventListener('click', () => runLive());
+$btnStop.addEventListener('click', () => stopRun());
 
 // ─────────────────────────────────────────────────────────────────
 // Bootstrap
 // ─────────────────────────────────────────────────────────────────
-$btnDemo.disabled = true;
-$btnReset.disabled = true;
+$btnRun.disabled = true;
+$btnStop.disabled = true;
 loadScenarios();
 </script>
 </body>
