@@ -1,0 +1,344 @@
+[
+  {
+    "scenario_id": "free_fall_galileo",
+    "question": "It has been claimed by some natural philosophers that heavier bodies fall faster than lighter ones. You have at your disposal a tall tower and an assortment of spheres of differing materials and weights. Investigate: does the rate of fall depend upon the weight of the body?",
+    "turns": [
+      {
+        "type": "scientist",
+        "content": "The received opinion of Aristotle holds that a heavier body falls with greater swiftness than a lighter one, in proportion to its weight. Yet I have long suspected this to be an error, for the reasoning seems to admit of no satisfactory quantitative account. I shall begin with a direct comparison: two spheres of identical size but greatly different weight dropped simultaneously from a considerable height.\n\nTOOL: propose_experiment\nDESCRIPTION: Drop two spheres simultaneously from the top of the tower — one of lead (approx. 2 lb) and one of wood (approx. 2 oz) of the same diameter. Observe whether they arrive at the ground together or separately, and if separately, by what interval.\nPARAMETERS:\n  sphere_a: lead, diameter 3 inches, weight 2 lb\n  sphere_b: wood, diameter 3 inches, weight 2 oz\n  drop_height: 54 feet (tower parapet)\n  observation: simultaneous arrival yes/no, time interval if any\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Drop two spheres simultaneously from the top of the tower — one of lead (approx. 2 lb) and one of wood (approx. 2 oz) of the same diameter. Observe whether they arrive at the ground together or separately, and if separately, by what interval.",
+          "parameters": {
+            "sphere_a": "lead, diameter 3 inches, weight 2 lb",
+            "sphere_b": "wood, diameter 3 inches, weight 2 oz",
+            "drop_height": "54 feet (tower parapet)",
+            "observation": "simultaneous arrival yes/no, time interval if any"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 1,
+        "success": true,
+        "content": "Report of Experiment 1:\n\nThe two spheres were released simultaneously by means of a board laid across both and then withdrawn sharply. Observers stationed at ground level with stopwatches and by direct observation report as follows:\n\nBoth spheres struck the flagstones within an interval too brief to distinguish by eye or pocket-watch. A third observer posted at mid-height of the tower reported that the spheres remained abreast throughout their descent — no separation was apparent at any point.\n\nThe lead sphere struck approximately a hand's-breadth ahead of the wooden sphere, but this was attributed by all observers to a slight asymmetry in the release — the board was not perfectly level. When the experiment was repeated with the board held more carefully level, both spheres arrived indistinguishably.\n\nTime of fall (estimated by pendulum clock): approximately 1.8 seconds."
+      },
+      {
+        "type": "scientist",
+        "content": "The result is most suggestive. The two spheres, of so great a difference in weight, arrive together — yet I must be careful, for the slight irregularity in the first release counsels caution. Let me now vary the weight more systematically and also measure the time of fall precisely, to determine whether any difference remains when properly controlled.\n\nTOOL: propose_experiment\nDESCRIPTION: Drop four spheres in successive pairs from the same height. Pair A: lead 4 lb vs lead 0.5 lb. Pair B: iron 2 lb vs cork 0.25 lb. Use a pendulum regulated to half-second beats to time each drop from release to impact. Repeat each pair three times.\nPARAMETERS:\n  height: 54 feet\n  pair_A: lead 4 lb, lead 0.5 lb (same diameter 3 in)\n  pair_B: iron 2 lb, cork 0.25 lb (same diameter 3 in)\n  timing: half-second pendulum, three repetitions each\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Drop four spheres in successive pairs from the same height. Pair A: lead 4 lb vs lead 0.5 lb. Pair B: iron 2 lb vs cork 0.25 lb. Use a pendulum regulated to half-second beats to time each drop from release to impact. Repeat each pair three times.",
+          "parameters": {
+            "height": "54 feet",
+            "pair_A": "lead 4 lb, lead 0.5 lb (same diameter 3 in)",
+            "pair_B": "iron 2 lb, cork 0.25 lb (same diameter 3 in)",
+            "timing": "half-second pendulum, three repetitions each"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 2,
+        "success": true,
+        "content": "Report of Experiment 2:\n\nPair A (lead 4 lb vs lead 0.5 lb):\n  Trial 1: simultaneous impact\n  Trial 2: simultaneous impact\n  Trial 3: simultaneous impact\n  Fall time: 1.83, 1.81, 1.84 seconds (mean 1.83 s)\n\nPair B (iron 2 lb vs cork 0.25 lb):\n  Trial 1: iron preceded cork by approximately 1/10 second\n  Trial 2: iron preceded cork by approximately 1/12 second\n  Trial 3: iron preceded cork by approximately 1/10 second\n  Iron fall time: 1.83, 1.82, 1.84 s (mean 1.83 s)\n  Cork fall time: 1.92, 1.94, 1.93 s (mean 1.93 s)\n\nNote: The cork sphere exhibited a slight wobble during descent, consistent with resistance from the air. In calm indoor conditions (the stairwell of the tower, 30 feet), both cork and iron fell simultaneously. The small discrepancy with cork appears only in the open-air drop."
+      },
+      {
+        "type": "scientist",
+        "content": "Excellent! The lead spheres fall at identical times regardless of their weight ratio of 8 to 1. The cork falls slightly slower — but this, I now suspect, is due to the resistance of the air, not the weight of the body per se. Cork is light and bulky; air resistance would affect it disproportionately. The experiment in the stairwell (still air, shorter drop) showed no difference.\n\nI should test whether the time of fall varies with height in a predictable manner, and whether I can determine the rate of acceleration.\n\nTOOL: propose_experiment\nDESCRIPTION: Drop a single lead sphere (2 lb) from four different heights: 10 ft, 20 ft, 40 ft, and 54 ft. Measure the time of fall in each case with the pendulum. If the body falls with constant acceleration, then distance should be proportional to the square of the time.\nPARAMETERS:\n  sphere: lead, 2 lb\n  heights: 10 ft, 20 ft, 40 ft, 54 ft\n  timing: half-second pendulum clock\n  repetitions: 3 per height\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Drop a single lead sphere (2 lb) from four different heights: 10 ft, 20 ft, 40 ft, and 54 ft. Measure the time of fall in each case with the pendulum.",
+          "parameters": {
+            "sphere": "lead, 2 lb",
+            "heights": "10 ft, 20 ft, 40 ft, 54 ft",
+            "timing": "half-second pendulum clock",
+            "repetitions": "3 per height"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 3,
+        "success": true,
+        "content": "Report of Experiment 3:\n\nHeight 10 ft: times 0.80, 0.79, 0.80 s (mean 0.80 s)\nHeight 20 ft: times 1.12, 1.11, 1.13 s (mean 1.12 s)\nHeight 40 ft: times 1.58, 1.59, 1.57 s (mean 1.58 s)\nHeight 54 ft: times 1.83, 1.84, 1.82 s (mean 1.83 s)\n\nRatios of fall times:\n  20 ft / 10 ft: 1.40 (square root of 2 = 1.414)\n  40 ft / 10 ft: 1.975 (square root of 4 = 2.000)\n  54 ft / 10 ft: 2.29 (square root of 5.4 = 2.324)\n\nThe times scale closely with the square root of the distance fallen. Within experimental error (estimated ±0.02 s), the data are consistent with distance being proportional to the square of elapsed time."
+      },
+      {
+        "type": "scientist",
+        "content": "The data confirm it admirably. The distances traversed stand in the ratio of the squares of the times elapsed — exactly as would follow if the body acquires velocity uniformly, that is, if it falls with constant acceleration regardless of the height from which it falls.\n\nThe evidence is now complete. Let me state my conclusion.\n\nTOOL: conclude\nHYPOTHESIS: All bodies, irrespective of their weight or material composition, fall with the same constant acceleration under gravity. The distance traversed is proportional to the square of the elapsed time (d ∝ t²). Any apparent difference in the rate of fall between bodies of different weight (e.g., cork versus lead) is due entirely to the resistance of the air, which affects light and bulky bodies more than heavy and dense ones. In the absence of air resistance, all bodies would fall identically. The Aristotelian doctrine that heavier bodies fall faster in proportion to their weight is refuted.\nCONFIDENCE: high\nEND",
+        "tool_call": {
+          "name": "conclude",
+          "hypothesis": "All bodies, irrespective of their weight or material composition, fall with the same constant acceleration under gravity. The distance traversed is proportional to the square of the elapsed time (d ∝ t²). Any apparent difference in the rate of fall between bodies of different weight (e.g., cork versus lead) is due entirely to the resistance of the air, which affects light and bulky bodies more than heavy and dense ones. In the absence of air resistance, all bodies would fall identically. The Aristotelian doctrine that heavier bodies fall faster in proportion to their weight is refuted.",
+          "confidence": "high"
+        }
+      },
+      {
+        "type": "judge",
+        "score": {
+          "total": 4,
+          "phenomenon_identified": true,
+          "qualitative_mechanism": true,
+          "quantitative_form": true,
+          "confidence_calibrated": true,
+          "reasoning": "The scientist correctly identifies mass-independent fall, correctly attributes differences in fall time for low-density objects to air resistance, and derives the d ∝ t² relationship from measured data. The quantitative analysis (ratios of fall times matching square root of distance ratios) directly yields the constant-acceleration result. Confidence is appropriately high given three replications across four heights. This is a full-credit result, as expected for the baseline tier."
+        }
+      }
+    ]
+  },
+  {
+    "scenario_id": "photoelectric_effect",
+    "question": "When certain metals are illuminated with violet or ultraviolet light, a small galvanic current is observed to flow. Curiously, this current appears only above a certain colour (frequency) of light, regardless of the brightness of the source. Below this colour, no current flows no matter how intense the illumination. Above this colour, increasing the brightness increases the current but not the vigour of the individual particles discharged. Investigate: what property of light determines whether particles are discharged from the metal?",
+    "turns": [
+      {
+        "type": "scientist",
+        "content": "The phenomenon is singular and deserves systematic examination. The question states plainly that the current depends on the colour of the light and not on the brightness — a most perplexing claim, for the wave theory of light holds that energy is distributed continuously across the wavefront, and greater brightness should mean greater energy delivered to the surface. I shall first verify the intensity relationship directly.\n\nTOOL: propose_experiment\nDESCRIPTION: Illuminate a polished zinc plate with violet light from a carbon arc lamp. Vary the intensity of the light by interposing one, two, and three screens of ground glass between the lamp and the plate. Measure the galvanic current at each intensity using a sensitive galvanometer.\nPARAMETERS:\n  light_source: carbon arc lamp with violet glass filter\n  intensities: full, 1/2 screen, 2 screens, 3 screens\n  metal: zinc plate, polished\n  measurement: galvanometer deflection in millimetres\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Illuminate a polished zinc plate with violet light from a carbon arc lamp. Vary the intensity of the light by interposing one, two, and three screens of ground glass. Measure the galvanic current at each intensity using a sensitive galvanometer.",
+          "parameters": {
+            "light_source": "carbon arc lamp with violet glass filter",
+            "intensities": "full, 1/2 screen, 2 screens, 3 screens",
+            "metal": "zinc plate, polished",
+            "measurement": "galvanometer deflection in millimetres"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 1,
+        "success": true,
+        "content": "Report of Experiment 1:\n\nThe galvanometer registers a deflection of 12.4 mm at full intensity of the violet source. Upon interposing a single screen of ground glass, the deflection falls to 6.1 mm. With two screens in place, a deflection of 3.0 mm is obtained. Three screens yield a deflection of 1.4 mm.\n\nA discharge current is observed at all intensities tested, even the weakest. The current appears to diminish in proportion to the intensity of illumination. No lower threshold is apparent when varying intensity alone — a faint current is present even behind three screens."
+      },
+      {
+        "type": "scientist",
+        "content": "Precisely as the question intimates — the current diminishes with intensity but never ceases entirely when violet light is used. Now let me examine what happens when only the colour (frequency) of light is changed while the intensity is held constant. I shall traverse the spectrum systematically from red through to violet.\n\nTOOL: propose_experiment\nDESCRIPTION: Keep the illumination intensity constant (full lamp, no screens). Pass the light through a series of coloured glass filters covering the spectrum: deep red, orange, yellow, green, blue-green, blue, and violet. Record in each case whether any galvanic current is detected, and if so, its magnitude.\nPARAMETERS:\n  light_source: carbon arc lamp, constant intensity\n  filters: deep_red, orange, yellow, green, blue_green, blue, violet\n  metal: zinc plate, polished\n  measurement: galvanometer reading (mm deflection or zero)\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Keep the illumination intensity constant. Pass the light through coloured glass filters from red through violet. Record whether galvanic current is detected and its magnitude.",
+          "parameters": {
+            "light_source": "carbon arc lamp, constant intensity",
+            "filters": "deep_red, orange, yellow, green, blue_green, blue, violet",
+            "metal": "zinc plate, polished",
+            "measurement": "galvanometer reading"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 2,
+        "success": true,
+        "content": "Report of Experiment 2:\n\nDeep red: No deflection. No current detected after five minutes' exposure.\nOrange: No deflection.\nYellow: No deflection.\nGreen: No deflection. A barely perceptible flicker (< 0.1 mm) noted once but not repeated; within instrument noise.\nBlue-green: No deflection.\nBlue: A clear, steady deflection of 4.2 mm registered almost immediately upon illumination.\nViolet: A deflection of 8.7 mm — stronger than blue, though both filters were prepared to pass equal lamp energy.\n\nThe transition is abrupt. Below blue, no current flows regardless of duration of exposure. Blue and above: current is immediate and reproducible. The violet, despite passing less total energy than the blue filter (as measured by a thermopile), produces a larger current."
+      },
+      {
+        "type": "scientist",
+        "content": "Most remarkable! The colour — and not the intensity — is the deciding factor for whether any current flows at all. Furthermore, violet, which carries less total energy through the filter than blue (as the thermopile shows), produces a stronger current. This directly contradicts any simple energy-flux argument.\n\nNow I must establish whether the 'vigour' of the individual discharged particles also depends on colour. I shall use a retarding potential: by opposing the current with a measured electric potential, I can determine the minimum voltage required to arrest the discharge — which measures the maximum kinetic energy of the emitted particles.\n\nTOOL: propose_experiment\nDESCRIPTION: Reduce the intensity of the violet source until its galvanometer reading matches that of blue at full intensity (≈ 4 mm). Then apply a retarding potential across the apparatus for each source and increase it until the current just ceases. The stopping voltage measures the vigour of the individual discharged particles.\nPARAMETERS:\n  source_A: blue filter, full intensity (~4 mm current)\n  source_B: violet filter, reduced intensity (matched to ~4 mm current)\n  measurement: retarding potential in Volts required to halt current\n  repetitions: 3 per source\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Match the current from violet (reduced intensity) and blue (full intensity). Apply increasing retarding voltage to each until current ceases. Compare stopping voltages to determine particle vigour.",
+          "parameters": {
+            "source_A": "blue filter, full intensity (~4 mm current)",
+            "source_B": "violet filter, reduced intensity (matched to ~4 mm current)",
+            "measurement": "retarding voltage in Volts to stop current",
+            "repetitions": "3 per source"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 3,
+        "success": true,
+        "content": "Report of Experiment 3:\n\nThe violet source was dimmed until both sources produced identical galvanometer readings of 4.0 mm (within 0.1 mm).\n\nBlue light — stopping voltages: 1.19 V, 1.21 V, 1.20 V (mean 1.20 V)\nViolet light — stopping voltages: 1.68 V, 1.71 V, 1.70 V (mean 1.70 V)\n\nDespite identical currents (and hence identical numbers of particles discharged per unit time), the stopping voltage for violet exceeds that for blue by 0.50 V. This difference is reproducible and well outside the uncertainty of the electrostatic apparatus (estimated ±0.03 V).\n\nThe individual particles discharged by violet light possess distinctly greater kinetic energy than those discharged by blue light, even when the total discharge rate (current) is equalised."
+      },
+      {
+        "type": "scientist",
+        "content": "The experiment settles the matter decisively. Let me now summarise the three observations and form my conclusion.\n\n1. Intensity alone determines the quantity of particles discharged (current), but plays no role in determining whether discharge occurs at all.\n2. Colour (frequency) determines whether discharge occurs: below a certain frequency, no discharge takes place regardless of intensity; above it, discharge is immediate.\n3. When currents are equalised (same number of particles per second), higher-frequency light produces particles of greater individual kinetic energy, as measured by the stopping potential.\n\nThese three facts cannot be reconciled with the view that light delivers energy continuously and uniformly across its wavefront, for in that case, sufficient intensity should always produce emission, and colour should have no special role in determining individual particle energy.\n\nThe evidence compels me toward a very different picture: light energy appears to be delivered in discrete, indivisible parcels, each of a fixed vigour determined solely by the frequency (colour) of the light. A parcel of insufficient frequency — however many arrive per second — cannot discharge a particle. A parcel of sufficient frequency discharges a particle, imparting to it a vigour proportional to the frequency. Increasing brightness means more parcels per second, hence more particles discharged — but each particle receives only one parcel's worth of vigour.\n\nTOOL: conclude\nHYPOTHESIS: The discharge of particles from metals by light is governed by the frequency (colour) of the light, not its intensity. Light appears to deliver its energy in discrete, indivisible parcels whose individual vigour is proportional to frequency alone. A single parcel of sufficient frequency can discharge one particle, imparting to it a kinetic energy that increases with frequency. Below a threshold frequency, no parcel carries sufficient energy to produce emission regardless of how many arrive per second (i.e., regardless of intensity). Intensity governs the rate of particle emission (number per second) but not the energy of each individual particle. This discrete character of light energy is fundamentally at odds with the continuous wave theory and demands a new understanding of the nature of radiant energy.\nCONFIDENCE: high\nEND",
+        "tool_call": {
+          "name": "conclude",
+          "hypothesis": "The discharge of particles from metals by light is governed by the frequency (colour) of the light, not its intensity. Light appears to deliver its energy in discrete, indivisible parcels whose individual vigour is proportional to frequency alone. A single parcel of sufficient frequency can discharge one particle, imparting to it a kinetic energy that increases with frequency. Below a threshold frequency, no parcel carries sufficient energy to produce emission regardless of how many arrive per second. Intensity governs the rate of particle emission but not the energy of each individual particle. This discrete character of light energy demands a new understanding of the nature of radiant energy.",
+          "confidence": "high"
+        }
+      },
+      {
+        "type": "judge",
+        "score": {
+          "total": 3,
+          "phenomenon_identified": true,
+          "qualitative_mechanism": true,
+          "quantitative_form": false,
+          "confidence_calibrated": true,
+          "reasoning": "The scientist correctly identifies all major qualitative features of the photoelectric effect: the threshold frequency, the independence of particle energy from intensity, the proportionality of particle energy to frequency, and the discrete nature of light energy parcels. The stopping-voltage experiment directly yields the key result. The hypothesis closely approximates Einstein's photon picture without using post-1900 vocabulary. The quantitative relationship E = hν is not derived (no numerical proportionality constant is extracted from the stopping voltage data), hence no credit for quantitative form. Confidence is appropriate given the quality of evidence."
+        }
+      }
+    ]
+  },
+  {
+    "scenario_id": "uv_catastrophe",
+    "question": "A blackened cavity maintained at a fixed temperature emits radiation. When the spectrum of this radiation is measured, it follows a characteristic curve: low intensity at long wavelengths, rising to a peak, then falling sharply at short wavelengths. The dominant theory (from the equipartition of energy) predicts that intensity should increase without limit at short wavelengths — a result clearly contradicted by observation. Investigate: which assumption underlying the classical prediction must be incorrect, and what modification would reconcile theory with experiment?",
+    "turns": [
+      {
+        "type": "scientist",
+        "content": "The problem is clearly stated: the equipartition theorem, applied to the modes of vibration in a cavity, predicts that each mode receives an equal share of the total thermal energy. Since the number of modes increases rapidly at shorter wavelengths, the theory predicts an unlimited rise in radiated intensity toward the violet — the ultraviolet catastrophe, as some have called it. Yet the observed spectrum falls steeply at short wavelengths.\n\nI must first confirm the shape of the observed spectrum precisely, and in particular establish how the peak wavelength depends on temperature. This may give me a clue as to which assumption is failing.\n\nTOOL: propose_experiment\nDESCRIPTION: Measure the spectral intensity of radiation from a blackened cavity at three temperatures: 1000 K, 1500 K, and 2000 K. For each temperature, record the wavelength at which the spectrum peaks and the total power emitted.\nPARAMETERS:\n  cavity_temperatures: 1000 K, 1500 K, 2000 K\n  measurement: spectral intensity vs wavelength (range 0.3 to 5 micrometres)\n  output: peak wavelength, total integrated power\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Measure blackbody spectral intensity at 1000 K, 1500 K, and 2000 K. Record peak wavelength and total power for each temperature.",
+          "parameters": {
+            "cavity_temperatures": "1000 K, 1500 K, 2000 K",
+            "measurement": "spectral intensity vs wavelength (0.3 to 5 µm)",
+            "output": "peak wavelength, total integrated power"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 1,
+        "success": true,
+        "content": "Report of Experiment 1:\n\nAt 1000 K: peak at 2.90 µm; total power 5.67 W/m²\nAt 1500 K: peak at 1.93 µm; total power 28.6 W/m²\nAt 2000 K: peak at 1.45 µm; total power 90.7 W/m²\n\nObservations: The peak shifts to shorter wavelengths as temperature increases. The product of peak wavelength and temperature is approximately constant: 2.90 × 1000 = 2900, 1.93 × 1500 = 2895, 1.45 × 2000 = 2900 (in µm·K). The total power increases as approximately the fourth power of temperature (5.67 × 2⁴ ≈ 90.7 W/m²). At short wavelengths, the spectrum falls steeply in all cases; at long wavelengths it also falls, but more gradually."
+      },
+      {
+        "type": "scientist",
+        "content": "Two remarkable regularities emerge: the peak wavelength is inversely proportional to temperature (λ_peak × T = constant ≈ 2900 µm·K), and the total radiated power scales as T⁴. These are precise empirical laws that any correct theory must reproduce.\n\nNow, the Rayleigh-Jeans law (from equipartition, each mode gets kT of energy) fits the long-wavelength end of the spectrum but fails catastrophically at short wavelengths. Let me measure this failure precisely — compare the Rayleigh-Jeans prediction against the observed spectrum at short wavelengths.\n\nTOOL: propose_experiment\nDESCRIPTION: At temperature 2000 K, measure the spectral intensity at wavelengths of 5, 2, 1, 0.7, and 0.5 micrometres. Compare these against the Rayleigh-Jeans prediction (intensity ∝ T/λ⁴). Express the ratio of observed to predicted at each wavelength.\nPARAMETERS:\n  temperature: 2000 K\n  wavelengths: 5.0, 2.0, 1.0, 0.7, 0.5 micrometres\n  comparison: ratio of observed intensity to Rayleigh-Jeans prediction\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "At 2000 K, compare measured spectral intensity against Rayleigh-Jeans prediction at several wavelengths. Express as ratio of observed to predicted.",
+          "parameters": {
+            "temperature": "2000 K",
+            "wavelengths": "5.0, 2.0, 1.0, 0.7, 0.5 µm",
+            "comparison": "ratio observed / Rayleigh-Jeans"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 2,
+        "success": true,
+        "content": "Report of Experiment 2:\n\nAt 2000 K, Rayleigh-Jeans vs observed:\n\n5.0 µm: ratio 0.98 (near agreement)\n2.0 µm: ratio 0.70\n1.0 µm: ratio 0.18\n0.7 µm: ratio 0.037\n0.5 µm: ratio 0.0028\n\nAt long wavelengths the Rayleigh-Jeans law is an excellent approximation. As wavelength decreases, the observed intensity deviates increasingly — and at 0.5 µm the observed intensity is roughly 350 times smaller than the equipartition prediction. The suppression grows extremely rapidly and cannot be an instrumental artefact."
+      },
+      {
+        "type": "scientist",
+        "content": "The suppression at short wavelengths is enormous — not a small correction but a near-total quenching of the high-frequency modes relative to equipartition. This degree of suppression suggests that the high-frequency modes are somehow prevented from absorbing their full share of thermal energy.\n\nLet me consider what would happen if the energy in each mode were not continuous (as equipartition assumes) but came only in discrete steps of some fixed size proportional to frequency. Then at high frequencies, the minimum quantum of energy would be large compared to kT — the mean thermal energy — and most modes would be unable to absorb even one quantum. This would effectively 'freeze out' those modes.\n\nI should test whether such a quantised model fits the data. If the energy of each mode is restricted to integer multiples of some unit ε(ν), and ε ∝ ν, then the average energy of each mode would be ε/(exp(ε/kT) − 1) — which reduces to kT at low frequencies (recovering Rayleigh-Jeans) and falls exponentially at high frequencies (matching observation).\n\nTOOL: propose_experiment\nDESCRIPTION: Attempt to fit the observed spectrum at 2000 K using a formula of the form I(λ) = C₁/λ⁵ × 1/(exp(C₂/λT) − 1), where C₁ and C₂ are constants to be determined. Find the best-fit values of C₁ and C₂ that minimise deviation from the observations across all wavelengths.\nPARAMETERS:\n  temperature: 2000 K\n  model: I = C1 / lambda^5 / (exp(C2 / (lambda * T)) - 1)\n  fitting: least squares over wavelengths 0.5 to 5 micrometres\n  output: best-fit C1, C2, and residuals\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Fit the observed 2000 K blackbody spectrum to I(λ) = C₁/λ⁵ × 1/(exp(C₂/λT)−1) by least squares. Return best-fit constants C₁ and C₂ and residuals.",
+          "parameters": {
+            "temperature": "2000 K",
+            "model": "I = C1/lambda^5 / (exp(C2/(lambda*T)) - 1)",
+            "fitting": "least squares, 0.5 to 5 µm",
+            "output": "best-fit C1, C2, residuals"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 3,
+        "success": true,
+        "content": "Report of Experiment 3:\n\nBest-fit constants:\n  C₁ = 3.74 × 10⁻¹⁶ W·m²\n  C₂ = 1.44 × 10⁻² m·K\n\nResiduals: Mean absolute deviation 0.8% across 12 wavelength points from 0.5 to 5 µm. The formula describes the observed spectrum to within measurement uncertainty at all wavelengths.\n\nFor comparison, the Rayleigh-Jeans law (no exponential term, equivalent to C₂ = 0) deviates by factors of 10–350 at short wavelengths.\n\nThe ratio C₂/C₁ carries the dimensions of (energy × time), consistent with C₂ = hc/k where h is a universal constant with units of action (J·s). At 1500 K and 1000 K the same constants C₁ and C₂ fit the spectra without adjustment."
+      },
+      {
+        "type": "scientist",
+        "content": "The formula fits all three temperatures with a single pair of constants — a remarkable result that strongly supports the hypothesis. The key modification to equipartition is this: the energy exchanged between matter and radiation is not continuous, but occurs only in discrete amounts proportional to frequency. High-frequency (short-wavelength) modes require a large minimum energy quantum to participate in thermal exchange; at moderate temperatures, most such modes remain unexcited, producing the observed suppression. At low frequencies, the quantum is small relative to thermal energy, and the old equipartition result is recovered as a limiting case.\n\nTOOL: conclude\nHYPOTHESIS: The equipartition theorem fails at high frequencies because its fundamental assumption — that energy is exchanged continuously and in arbitrarily small amounts — is incorrect. Energy is in fact exchanged between matter and the radiation field only in discrete quantities proportional to frequency. A high-frequency mode cannot absorb an arbitrarily small increment of energy; it must absorb a full quantum or nothing. At temperatures where the thermal energy kT is small compared to the frequency quantum, the high-frequency modes are effectively frozen out, producing the observed sharp fall in the spectrum at short wavelengths. At low frequencies (long wavelengths), the quantum is negligible compared to kT and the classical equipartition result is recovered. The spectral distribution is described by I ∝ ν³/(exp(hν/kT)−1), with a universal constant h governing the size of the quantum.\nCONFIDENCE: high\nEND",
+        "tool_call": {
+          "name": "conclude",
+          "hypothesis": "The equipartition theorem fails at high frequencies because energy exchange is not continuous but occurs in discrete quanta proportional to frequency. High-frequency modes require large minimum quanta and are frozen out at moderate temperatures, producing the observed spectral fall. The distribution is described by I ∝ ν³/(exp(hν/kT)−1) with a universal constant h. At low frequencies, classical equipartition is recovered as a limiting case.",
+          "confidence": "high"
+        }
+      },
+      {
+        "type": "judge",
+        "score": {
+          "total": 4,
+          "phenomenon_identified": true,
+          "qualitative_mechanism": true,
+          "quantitative_form": true,
+          "confidence_calibrated": true,
+          "reasoning": "The scientist correctly identifies the failure of equipartition, correctly proposes discretisation of energy exchange, derives the Planck distribution formula through curve fitting, and notes its limiting behaviour. The quantitative form I ∝ ν³/(exp(hν/kT)−1) is explicitly stated. The constant h is identified as a universal 'quantum of action'. Confidence is appropriately high. This is a full-credit response for the target tier."
+        }
+      }
+    ]
+  },
+  {
+    "scenario_id": "special_relativity_michelson_morley",
+    "question": "Maxwell's equations predict that light travels at a fixed speed c in the luminiferous aether. If the Earth moves through the aether, an interferometer sensitive enough to detect the difference in light speed along and perpendicular to the Earth's motion should show a fringe shift. Michelson and Morley conducted this experiment with great care and found no fringe shift whatsoever. Yet removing the aether leaves Maxwell's equations without a medium, and Newtonian mechanics requires velocities to add. Investigate: how can these results be reconciled?",
+    "turns": [
+      {
+        "type": "scientist",
+        "content": "The result of Michelson and Morley (1887) stands as perhaps the most troubling null result in the history of natural philosophy. Every attempt to detect the motion of the Earth through the aether has failed. Before proposing any theoretical modification, let me first verify and quantify the null result under varying conditions.\n\nTOOL: propose_experiment\nDESCRIPTION: Repeat the Michelson-Morley interferometer experiment at three times of year (positions of Earth's orbit roughly 120° apart) and at two times of day (12 hours apart, giving opposite Earth-rotation contributions). Record fringe shift in each configuration. Expected shift from aether theory: approximately 0.4 fringes. Record upper bound on any observed shift.\nPARAMETERS:\n  apparatus: Michelson interferometer, arm length 11 metres\n  epochs: three orbital positions (January, May, September), two daily orientations each\n  expected_aether_shift: 0.4 fringes (based on Earth orbital speed 30 km/s)\n  measurement: fringe displacement (units of fringe spacing)\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Repeat Michelson-Morley at three orbital epochs and two daily orientations. Record upper bound on observed fringe shift vs predicted 0.4 fringes.",
+          "parameters": {
+            "apparatus": "Michelson interferometer, 11m arms",
+            "epochs": "January, May, September; two daily orientations each",
+            "expected_aether_shift": "0.4 fringes",
+            "measurement": "fringe displacement"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 1,
+        "success": true,
+        "content": "Report of Experiment 1:\n\nSix configurations measured (3 orbital × 2 daily):\n\nJanuary, 0° rotation: 0.003 ± 0.008 fringes\nJanuary, 180° rotation: −0.002 ± 0.008 fringes\nMay, 0° rotation: 0.005 ± 0.008 fringes\nMay, 180° rotation: 0.001 ± 0.008 fringes\nSeptember, 0° rotation: −0.004 ± 0.008 fringes\nSeptember, 180° rotation: 0.003 ± 0.008 fringes\n\nAll results are consistent with zero to within experimental uncertainty. Upper bound on any aether-wind effect: < 0.015 fringes. The aether-theory prediction of 0.4 fringes is excluded at better than 25σ. No systematic variation with orbital epoch or daily orientation is detected."
+      },
+      {
+        "type": "scientist",
+        "content": "The null result is confirmed with overwhelming precision. The aether wind, if it exists, produces at most one-twenty-seventh of the predicted effect. Three explanations have been proposed in the literature: (1) the aether is dragged along by the Earth (Stokes), (2) moving bodies contract in the direction of motion by just enough to cancel the expected shift (Lorentz, FitzGerald), or (3) something more fundamental is wrong with our assumptions.\n\nThe aether-drag hypothesis is already excluded by stellar aberration (Bradley 1727): the annual apparent displacement of stars requires that light travels through the aether without being dragged, or aberration would not occur. Let me test the Lorentz-FitzGerald contraction hypothesis directly: if a body moving with speed v contracts by a factor √(1−v²/c²) in the direction of motion, can this be detected by other means?\n\nTOOL: propose_experiment\nDESCRIPTION: Use a rotating interferometer with unequal arm lengths (one arm 11 m, one arm 7 m). If the FitzGerald contraction is real, the fringe pattern should shift when the interferometer is rotated 90°. Measure any such shift as the apparatus is slowly rotated through 360°.\nPARAMETERS:\n  apparatus: interferometer with arms 11 m and 7 m\n  test: rotate through 360° in 10-minute intervals\n  prediction_if_contraction_real: fringe shift proportional to arm-length difference × v²/c²\n  measurement: fringe displacement vs rotation angle\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Interferometer with unequal arms (11 m and 7 m). Rotate 360°. FitzGerald contraction predicts a fringe shift proportional to arm difference × v²/c². Measure fringe vs rotation angle.",
+          "parameters": {
+            "apparatus": "interferometer, arms 11 m and 7 m",
+            "test": "full rotation in 10-minute intervals",
+            "prediction": "fringe shift ∝ (11−7) × v²/c² if contraction real",
+            "measurement": "fringe vs angle"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 2,
+        "success": true,
+        "content": "Report of Experiment 2:\n\nNo fringe shift is observed as the interferometer is rotated. The pattern remains stationary to within 0.01 fringes throughout the full 360° rotation. This is true at all epochs.\n\nIf the FitzGerald contraction is a physical contraction of matter in the direction of motion, it does not produce any detectable differential effect in the rotating interferometer. However, the contraction hypothesis cannot be directly falsified by this experiment alone: it predicts exactly zero net fringe shift in the Michelson-Morley geometry (that is its purpose), and it also predicts zero shift here because both arms contract equally when aligned along the motion direction. A null result is therefore compatible with contraction, but contraction cannot be independently confirmed by this method."
+      },
+      {
+        "type": "scientist",
+        "content": "The contraction hypothesis is self-consistent but untestable by the interferometer — it is specifically constructed to yield zero fringe shift. This is an unsatisfying situation. Let me probe more deeply: what is the actual relationship between the speed of light and the motion of the source or observer?\n\nTOOL: propose_experiment\nDESCRIPTION: Measure the speed of light from a moving source. Use a rapidly rotating mirror (Fizeau-style) with the light source mounted on a turntable moving at v = 50 m/s toward and then away from the detector. Measure whether the apparent speed of light differs between the two cases.\nPARAMETERS:\n  source_velocity: +50 m/s (toward), −50 m/s (away)\n  method: rotating mirror, time-of-flight over 8 km path\n  expected_if_galilean: c ± 50 m/s\n  expected_if_constant_c: no change\n  measurement: light speed in m/s\nEND",
+        "tool_call": {
+          "name": "propose_experiment",
+          "description": "Fizeau-style rotating mirror measurement of light speed from a source moving at ±50 m/s. Does measured speed of light change with source velocity?",
+          "parameters": {
+            "source_velocity": "+50 m/s and −50 m/s",
+            "method": "rotating mirror, 8 km path",
+            "expected_galilean": "c ± 50",
+            "measurement": "speed of light m/s"
+          }
+        }
+      },
+      {
+        "type": "simulator",
+        "experiment_number": 3,
+        "success": true,
+        "content": "Report of Experiment 3:\n\nMeasured speed of light:\n  Source moving at +50 m/s (toward detector): 299,792,461 ± 15 m/s\n  Source moving at −50 m/s (away from detector): 299,792,447 ± 15 m/s\n  Stationary source: 299,792,458 ± 15 m/s\n\nAll three measurements are consistent with the same value within experimental uncertainty. The 50 m/s source velocity produces no detectable change in the measured speed of light. The upper bound on any source-velocity dependence is < 30 m/s, which is 0.00001% of c.\n\nFor comparison, Galilean velocity addition would predict a difference of 100 m/s between the two cases — excluded at better than 3σ."
+      },
+      {
+        "type": "scientist",
+        "content": "Three separate lines of evidence now converge: the Michelson-Morley null result, the null rotation result, and now the invariance of the speed of light with source motion. Together they point to a single startling conclusion: the speed of light is the same for all observers, regardless of their motion relative to the source or to any supposed aether medium.\n\nBut this conclusion forces a profound revision of our notion of space and time. In Newtonian mechanics, if I move toward a light source at speed v, the light should approach me at c + v. If instead it always approaches at c, then time and distance must be measured differently by observers in relative motion.\n\nConsider: if c is constant, and distance = speed × time, then for two observers in relative motion to agree on c but disagree on distance (due to contraction), they must also disagree on time. The simultaneity of events cannot be absolute.\n\nTOOL: conclude\nHYPOTHESIS: The luminiferous aether does not exist, or if it does, it is entirely undetectable and plays no physical role. The speed of light is an absolute constant, the same for all inertial observers regardless of their motion relative to the source or to each other. This requires abandoning Galilean velocity addition and Newtonian absolute time. Two observers in relative motion will disagree about distances (they are contracted in the direction of motion by the factor √(1−v²/c²)) and about the duration of intervals between events (time is dilated by the same factor). Events that are simultaneous for one observer are not simultaneous for another in relative motion. The correct transformation between frames — replacing Galilean addition — must preserve the speed of light, and it has the form derived by Lorentz: the Lorentz transformation. This resolves the Michelson-Morley result because there is no aether wind to detect: light speed is the same in all directions for all observers.\nCONFIDENCE: medium\nEND",
+        "tool_call": {
+          "name": "conclude",
+          "hypothesis": "The aether does not exist or is physically irrelevant. The speed of light is an absolute constant for all inertial observers. This requires abandoning absolute time and Galilean velocity addition. Observers in relative motion disagree on lengths and durations by the Lorentz factor √(1−v²/c²), and simultaneity is relative. The Lorentz transformation replaces Galilean addition and preserves the constancy of c. The Michelson-Morley null result follows because there is no aether wind.",
+          "confidence": "medium"
+        }
+      },
+      {
+        "type": "judge",
+        "score": {
+          "total": 3,
+          "phenomenon_identified": true,
+          "qualitative_mechanism": true,
+          "quantitative_form": true,
+          "confidence_calibrated": true,
+          "reasoning": "The scientist correctly identifies the absence of a preferred inertial frame, the constancy of the speed of light, the relativity of simultaneity, and derives Lorentz contraction and time dilation. The Lorentz transformation is named and described. The hypothesis is qualitatively and quantitatively consistent with special relativity. The medium confidence is appropriately calibrated given the radical nature of the conclusion and the limited direct experimental confirmation within the scenario. One point is withheld for quantitative form: while the Lorentz factor √(1−v²/c²) is stated, the scientist does not write out the full Lorentz transformation equations or derive a numerical prediction that could be tested. For a stretch-tier problem, this is a remarkable result."
+        }
+      }
+    ]
+  }
+]

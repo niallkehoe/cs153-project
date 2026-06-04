@@ -72,7 +72,11 @@ _tokenizer = None
 _device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def load_model(model_dir: str, checkpoint: str | None = None) -> None:
+def load_model(
+    model_dir: str,
+    checkpoint: str | None = None,
+    model_files_dir: str | None = None,
+) -> None:
     """
     Load GPT-1900 model and tokenizer from the nanochat model directory.
 
@@ -81,23 +85,28 @@ def load_model(model_dir: str, checkpoint: str | None = None) -> None:
 
     File discovery order
     ~~~~~~~~~~~~~~~~~~~~
-    - Tokenizer: ``{model_dir}/tokenizer/``
+    - Tokenizer: ``{model_files_dir}/tokenizer/``
     - Meta JSON: explicit ``checkpoint`` path stripped to ``.json``, or the
-      first ``meta_*.json`` found in ``model_dir``
+      first ``meta_*.json`` found in ``model_files_dir``
     - Checkpoint: explicit ``checkpoint`` path if given, else the first
-      ``model_*.pt`` found in ``model_dir``
+      ``model_*.pt`` found in ``model_files_dir``
 
     Parameters
     ----------
     model_dir:
-        Path to the cloned gpt1900 repository root.
+        Path to the cloned gpt1900 repository root (added to sys.path so
+        ``nanochat`` can be imported).
     checkpoint:
         Optional path to a specific ``.pt`` checkpoint file. If None, the
-        most recently modified ``model_*.pt`` in ``model_dir`` is used.
+        most recently modified ``model_*.pt`` in ``model_files_dir`` is used.
+    model_files_dir:
+        Directory containing ``tokenizer/``, ``meta_*.json``, and
+        ``model_*.pt``. Defaults to ``model_dir`` when not set, which is
+        correct when the model files live inside the cloned repo.
     """
     global _model, _tokenizer
 
-    root = Path(model_dir)
+    root = Path(model_files_dir or model_dir)
 
     # Import nanochat from the gpt1900 repo (inserted into sys.path by main())
     from nanochat.gpt import GPT, GPTConfig  # type: ignore[import]
@@ -207,14 +216,20 @@ async def health() -> dict[str, str]:
 def main() -> None:
     """Parse CLI args, load model, start server."""
     parser = argparse.ArgumentParser(description="GPT-1900 inference server.")
-    parser.add_argument("--model-dir", required=True, help="Path to gpt1900 repo root")
+    parser.add_argument("--model-dir", required=True, help="Path to gpt1900 repo root (for nanochat imports)")
+    parser.add_argument(
+        "--model-files-dir",
+        default=None,
+        help="Directory containing tokenizer/, meta_*.json, model_*.pt. "
+             "Defaults to --model-dir when not set.",
+    )
     parser.add_argument("--checkpoint", default=None, help="Path to model checkpoint .pt file")
     parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
     args = parser.parse_args()
 
     sys.path.insert(0, args.model_dir)
-    load_model(args.model_dir, args.checkpoint)
+    load_model(args.model_dir, args.checkpoint, args.model_files_dir)
 
     uvicorn.run(app, host=args.host, port=args.port)
 

@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Machina Mirabilis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Warm dark — not cold navy */
+      --bg:       #08070c;
+      --surface:  #0e0c16;
+      --surface2: #131120;
+      --surface3: #1a1828;
+
+      /* Borders */
+      --line:     #1e1c2e;
+      --line2:    #2c2a40;
+      --line3:    #3c3a54;
+
+      /* Amber — scientist, primary action (one accent, used sparingly) */
+      --amber:    #c0882a;
+      --amber-hi: #dca030;
+      --amber-lo: #6a4818;
+
+      /* Steel — simulator */
+      --steel:    #487aa0;
+      --steel-hi: #60a0c8;
+      --steel-lo: #284860;
+
+      /* Slate — judge */
+      --slate:    #6858a8;
+      --slate-hi: #9080c8;
+      --slate-lo: #3c3068;
+
+      /* Semantic */
+      --pass: #3e885a;
+      --fail: #884040;
+
+      /* Two text levels + one for metadata only */
+      --ink:   #ddd0b8;
+      --ink2:  #928070;
+      --ink3:  #504840;
+
+      --serif: 'EB Garamond', Georgia, serif;
+      --mono:  'JetBrains Mono', 'Courier New', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 17px;
+      line-height: 1.65;
+      overflow: hidden;
+    }
+
+    /* ── Layout ── */
+    #app {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-columns: 260px 1fr 242px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    #header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 50px;
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .header-left { display: flex; align-items: baseline; gap: 16px; }
+
+    #header h1 {
+      font-family: var(--serif);
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      color: var(--amber);
+      text-transform: uppercase;
+    }
+
+    .header-subtitle {
+      font-style: italic;
+      color: var(--ink3);
+      font-size: 0.88rem;
+    }
+
+    .header-right { display: flex; align-items: center; gap: 10px; }
+
+    /* ── Left sidebar ── */
+    #sidebar {
+      grid-row: 2;
+      grid-column: 1;
+      border-right: 1px solid var(--line);
+      background: var(--surface);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-section {
+      padding: 14px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sidebar-label {
+      font-family: var(--mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink3);
+      margin-bottom: 10px;
+    }
+
+    /* Scenario cards */
+    .scenario-card {
+      padding: 10px 11px;
+      border-radius: 3px;
+      border: 1px solid var(--line);
+      border-left: 3px solid transparent;
+      background: var(--surface2);
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .scenario-card:hover {
+      background: var(--surface3);
+      border-color: var(--line2);
+      border-left-color: transparent;
+    }
+
+    .scenario-card.active {
+      border-color: var(--line2);
+      border-left-color: var(--amber);
+      background: var(--surface3);
+    }
+
+    .scenario-name {
+      font-size: 0.87rem;
+      color: var(--ink);
+      line-height: 1.35;
+      margin-bottom: 6px;
+    }
+
+    .scenario-card.active .scenario-name { color: var(--amber-hi); }
+
+    .scenario-meta { display: flex; gap: 5px; flex-wrap: wrap; }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 0.56rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 2px;
+      border: 1px solid;
+    }
+
+    .badge-tier-baseline { color: #50a068; border-color: #204830; background: #0c1c12; }
+    .badge-tier-target   { color: #5080b8; border-color: #203060; background: #0c1222; }
+    .badge-tier-stretch  { color: #9060b8; border-color: #3c2060; background: #160c22; }
+    .badge-diff          { color: var(--amber); border-color: var(--amber-lo); background: var(--surface); }
+
+    /* Controls */
+    .control-group { margin-bottom: 12px; }
+
+    .control-label {
+      font-family: var(--mono);
+      font-size: 0.64rem;
+      color: var(--ink2);
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 2px;
+      background: var(--line2);
+      border-radius: 1px;
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: var(--amber);
+      cursor: pointer;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: var(--mono);
+      font-size: 0.67rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 9px 14px;
+      border-radius: 3px;
+      border: 1px solid;
+      cursor: pointer;
+      transition: border-color 0.1s, background 0.1s;
+      width: 100%;
+      margin-bottom: 6px;
+    }
+
+    .btn-demo {
+      background: var(--surface3);
+      color: var(--amber-hi);
+      border-color: var(--amber-lo);
+    }
+    .btn-demo:hover { border-color: var(--amber); background: #1e1c2c; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--ink2);
+      border-color: var(--line);
+    }
+    .btn-ghost:hover { border-color: var(--line2); color: var(--ink); }
+
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Legend */
+    .legend { display: flex; flex-direction: column; gap: 8px; }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 0.85rem;
+      color: var(--ink2);
+    }
+
+    .legend-dot { width: 8px; height: 8px; border-radius: 1px; flex-shrink: 0; }
+    .ld-scientist { background: var(--amber); }
+    .ld-simulator { background: var(--steel); }
+    .ld-judge     { background: var(--slate); }
+
+    /* ── Main feed ── */
+    #main {
+      grid-row: 2; grid-column: 2;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    #feed-header {
+      padding: 12px 26px 11px;
+      border-bottom: 1px solid var(--line);
+      flex-shrink: 0;
+      background: var(--surface);
+    }
+
+    #feed-title {
+      font-size: 0.95rem;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    #feed-domain {
+      font-family: var(--mono);
+      font-size: 0.57rem;
+      color: var(--ink3);
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    #feed {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      scroll-behavior: smooth;
+    }
+
+    /* Empty state */
+    #empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--ink3);
+      padding: 40px;
+      text-align: center;
+    }
+
+    .empty-glyph { font-size: 2rem; opacity: 0.18; }
+    .empty-text  { font-style: italic; font-size: 0.97rem; line-height: 1.65; max-width: 300px; }
+
+    /* ── Turn entries ──
+       The .turn-avatar div becomes a 3px coloured strip.
+       No circular chat bubbles — cleaner, more editorial.     */
+    .turn {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--line);
+      animation: fadeIn 0.16s ease;
+    }
+
+    .turn:last-child { border-bottom: none; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .turn-avatar {
+      width: 3px;
+      flex-shrink: 0;
+      align-self: stretch;
+      font-size: 0;          /* hide text label */
+      color: transparent;
+      border-radius: 0;
+    }
+
+    .avatar-scientist { background: var(--amber); }
+    .avatar-simulator { background: var(--steel); }
+    .avatar-judge     { background: var(--slate); }
+    .avatar-question  { background: var(--line2); }
+
+    .turn-body { flex: 1; min-width: 0; padding: 22px 28px 26px; }
+
+    .turn-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 9px;
+    }
+
+    .turn-agent {
+      font-family: var(--mono);
+      font-size: 0.61rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .agent-scientist { color: var(--amber); }
+    .agent-simulator { color: var(--steel-hi); }
+    .agent-judge     { color: var(--slate-hi); }
+    .agent-question  { color: var(--ink2); }
+
+    .turn-timestamp {
+      font-family: var(--mono);
+      font-size: 0.56rem;
+      color: var(--ink3);
+    }
+
+    /* Prose is the hero — large, warm, very readable serif */
+    .turn-content {
+      font-family: var(--serif);
+      font-size: 1.05rem;
+      line-height: 1.8;
+      color: var(--ink);
+    }
+
+    /* ── Tool call blocks ── */
+    .tool-block {
+      margin-top: 16px;
+      border: 1px solid var(--line2);
+      border-left: 2px solid var(--amber-lo);
+      border-radius: 2px;
+      background: var(--surface2);
+      overflow: hidden;
+    }
+
+    .tool-block.tool-conclude { border-left-color: var(--amber); }
+
+    .tool-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: rgba(192,136,42,0.07);
+      border-bottom: 1px solid var(--line2);
+    }
+
+    .tool-name {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--amber);
+    }
+
+    .tool-chip {
+      font-family: var(--mono);
+      font-size: 0.54rem;
+      padding: 2px 7px;
+      border-radius: 2px;
+      background: rgba(192,136,42,0.1);
+      color: var(--amber-hi);
+      border: 1px solid rgba(192,136,42,0.18);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .tool-body { padding: 12px 16px; }
+
+    .tool-field { margin-bottom: 10px; }
+    .tool-field:last-child { margin-bottom: 0; }
+
+    .tool-field-label {
+      font-family: var(--mono);
+      font-size: 0.57rem;
+      letter-spacing: 0.17em;
+      text-transform: uppercase;
+      color: var(--ink3);
+      margin-bottom: 4px;
+    }
+
+    .tool-field-value {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--ink);
+      line-height: 1.62;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .tool-params {
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.22);
+      border-radius: 2px;
+      border: 1px solid var(--line);
+    }
+
+    .param-row {
+      display: flex;
+      gap: 12px;
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      margin-bottom: 3px;
+      line-height: 1.5;
+    }
+
+    .param-row:last-child { margin-bottom: 0; }
+    .param-key { color: var(--steel-hi); flex-shrink: 0; min-width: 80px; }
+    .param-val { color: var(--ink2); }
+
+    /* ── Simulator result blocks ── */
+    .sim-block {
+      margin-top: 16px;
+      padding: 14px 18px;
+      border: 1px solid var(--line2);
+      border-left: 2px solid var(--steel);
+      border-radius: 2px;
+      background: var(--surface2);
+    }
+
+    .sim-block.sim-failure { border-left-color: var(--fail); }
+
+    .sim-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sim-icon {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--steel);
+      flex-shrink: 0;
+    }
+    .sim-block.sim-failure .sim-icon { background: var(--fail); }
+
+    .sim-label {
+      font-family: var(--mono);
+      font-size: 0.59rem;
+      letter-spacing: 0.17em;
+      text-transform: uppercase;
+      color: var(--steel-hi);
+    }
+    .sim-block.sim-failure .sim-label { color: #a06060; }
+
+    .sim-content {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--ink);
+      line-height: 1.72;
+      white-space: pre-wrap;
+    }
+
+    /* ── Judge card ── */
+    .judge-card {
+      margin-top: 16px;
+      border: 1px solid var(--line2);
+      border-left: 2px solid var(--slate);
+      border-radius: 2px;
+      background: var(--surface2);
+      overflow: hidden;
+    }
+
+    .judge-card-header {
+      padding: 12px 18px;
+      background: rgba(104,88,168,0.07);
+      border-bottom: 1px solid var(--line2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .judge-title {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.17em;
+      text-transform: uppercase;
+      color: var(--slate-hi);
+    }
+
+    .score-total {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: var(--amber-hi);
+      letter-spacing: -0.02em;
+    }
+
+    .score-denom { font-size: 0.72rem; color: var(--ink2); }
+
+    .score-pips { display: flex; gap: 5px; align-items: center; }
+
+    .pip { width: 8px; height: 8px; border-radius: 1px; }
+    .pip-filled { background: var(--amber); }
+    .pip-empty  { background: var(--line2); border: 1px solid var(--line3); }
+
+    .judge-criteria {
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .criterion {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.93rem;
+    }
+
+    .criterion-icon {
+      width: 15px; height: 15px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.5rem;
+      font-weight: 700;
+    }
+
+    .criterion-pass { background: rgba(62,136,90,0.16); border: 1px solid #224832; color: #5ab870; }
+    .criterion-fail { background: rgba(136,64,64,0.16); border: 1px solid #482828; color: #b07070; }
+
+    .criterion-label { color: var(--ink); line-height: 1.45; }
+
+    .judge-reasoning {
+      padding: 13px 18px 18px;
+      border-top: 1px solid var(--line);
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 0.97rem;
+      color: var(--ink2);
+      line-height: 1.75;
+    }
+
+    /* ── Right panel ── */
+    #info-panel {
+      grid-row: 2; grid-column: 3;
+      border-left: 1px solid var(--line);
+      background: var(--surface);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-section {
+      padding: 14px 15px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .info-label {
+      font-family: var(--mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--ink3);
+      margin-bottom: 10px;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--mono);
+      font-size: 0.63rem;
+      padding: 5px 10px;
+      border-radius: 3px;
+      border: 1px solid var(--line);
+      color: var(--ink3);
+      letter-spacing: 0.06em;
+    }
+
+    .status-badge.status-idle     { color: var(--ink3); border-color: var(--line); }
+    .status-badge.status-thinking { color: var(--amber-hi); border-color: var(--amber-lo); background: rgba(192,136,42,0.07); }
+    .status-badge.status-running  { color: var(--steel-hi); border-color: var(--steel-lo); background: rgba(72,122,160,0.07); }
+    .status-badge.status-scoring  { color: var(--slate-hi); border-color: var(--slate-lo); background: rgba(104,88,168,0.07); }
+    .status-badge.status-done     { color: #58b870; border-color: #1e4028; background: rgba(62,136,90,0.07); }
+
+    .status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+    .status-badge.status-thinking .status-dot,
+    .status-badge.status-running  .status-dot { animation: blink 1.3s ease-in-out infinite; }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+    .stat-box {
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      background: var(--surface2);
+    }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.28rem;
+      font-weight: 500;
+      color: var(--ink);
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 0.56rem;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--ink3);
+    }
+
+    /* Timeline */
+    .timeline { display: flex; flex-direction: column; gap: 7px; }
+
+    .timeline-entry { display: flex; align-items: flex-start; gap: 9px; }
+
+    .timeline-dot { width: 7px; height: 7px; border-radius: 1px; flex-shrink: 0; margin-top: 7px; }
+    .dot-exp      { background: var(--steel); }
+    .dot-fail     { background: var(--fail); }
+    .dot-conclude { background: var(--amber); }
+
+    .timeline-text { color: var(--ink2); line-height: 1.4; font-size: 0.8rem; }
+
+    /* Progress */
+    .progress-wrap {
+      height: 2px;
+      background: var(--line);
+      border-radius: 1px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--amber);
+      border-radius: 1px;
+      transition: width 0.4s ease;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--line3); }
+
+    /* Typing cursor */
+    .typing-cursor::after {
+      content: '▋';
+      animation: blink 0.7s step-start infinite;
+      color: var(--amber);
+    }
+
+    @media (max-width: 1000px) {
+      #app { grid-template-columns: 240px 1fr 0; }
+      #info-panel { display: none; }
+    }
+
+    .divider { height: 1px; background: var(--line); margin: 10px 0; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header id="header">
+    <div class="header-left">
+      <h1>Machina Mirabilis</h1>
+      <span class="header-subtitle">re-discovery eval pipeline</span>
+    </div>
+    <div class="header-right">
+      <span id="global-status" class="status-badge status-idle">
+        <span class="status-dot"></span>
+        <span id="global-status-text">idle</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- ── Left sidebar ── -->
+  <aside id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Investigations</div>
+      <div id="scenario-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Playback</div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>Speed</span>
+          <span id="speed-val">1×</span>
+        </div>
+        <input type="range" class="slider" id="speed-slider" min="1" max="5" value="2" step="1" />
+      </div>
+      <button class="btn btn-demo" id="btn-demo">▶ Run Demo</button>
+      <button class="btn btn-ghost" id="btn-reset" disabled>↺ Reset</button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Agents</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot ld-scientist"></div>GPT-1900 Scientist</div>
+        <div class="legend-item"><div class="legend-dot ld-simulator"></div>Simulator (Judge LLM)</div>
+        <div class="legend-item"><div class="legend-dot ld-judge"></div>Evaluator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main feed ── -->
+  <main id="main">
+    <div id="feed-header">
+      <div id="feed-title" style="font-style:italic; color: var(--ink3);">Select an investigation to begin</div>
+      <div id="feed-domain"></div>
+    </div>
+
+    <div id="feed">
+      <div id="empty-state">
+        <div class="empty-glyph">⚗</div>
+        <div class="empty-text">
+          Choose an investigation from the left panel, then press <em>Run Demo</em> to observe the experiment loop unfold.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ── Right info panel ── -->
+  <aside id="info-panel">
+
+    <div class="info-section">
+      <div class="info-label">Current Agent</div>
+      <span id="agent-status" class="status-badge status-idle">
+        <span class="status-dot"></span>
+        <span id="agent-status-text">none</span>
+      </span>
+    </div>
+
+    <div class="info-section">
+      <div class="info-label">Run Statistics</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="stat-turns">0</div>
+          <div class="stat-label">Turns</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-exps">0</div>
+          <div class="stat-label">Experiments</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-score">—</div>
+          <div class="stat-label">Score</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="stat-conf">—</div>
+          <div class="stat-label">Confidence</div>
+        </div>
+      </div>
+      <div class="progress-wrap" style="margin-top:10px;">
+        <div class="progress-fill" id="turn-progress" style="width:0%"></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:0.56rem;color:var(--ink3);margin-top:5px;">
+        Turn progress (<span id="turns-used">0</span>/<span id="turns-max">—</span>)
+      </div>
+    </div>
+
+    <div class="info-section" id="timeline-section">
+      <div class="info-label">Experiment Log</div>
+      <div class="timeline" id="timeline">
+        <div style="font-size:0.8rem;color:var(--ink3);font-style:italic;">No experiments yet</div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <div class="info-label">About</div>
+      <div style="font-size:0.83rem;color:var(--ink2);line-height:1.65;">
+        GPT-1900 is a language model trained on text predating 1900. It is given
+        a domain question and tool access to propose experiments. A modern LLM
+        acts as the simulator, returning period-appropriate observations. A judge
+        evaluates the final hypothesis.
+      </div>
+    </div>
+
+  </aside>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────
+const state = {
+  scenarios: [],
+  selectedId: null,
+  demoData: null,
+  playing: false,
+  turnIndex: 0,
+  playTimer: null,
+  expCount: 0,
+  turnCount: 0,
+  finalScore: null,
+  finalConf: null,
+  maxTurns: 10,
+  timeline: [],
+};
+
+// Speed map: slider value → ms delay between turns
+const SPEED_MAP = { 1: 3200, 2: 1800, 3: 900, 4: 400, 5: 80 };
+// Typing speed: chars per interval tick
+const TYPE_SPEED_MAP = { 1: 4, 2: 8, 3: 18, 4: 50, 5: 999 };
+
+// ─────────────────────────────────────────────────────────────────
+// DOM refs
+// ─────────────────────────────────────────────────────────────────
+const $feed            = document.getElementById('feed');
+const $feedTitle       = document.getElementById('feed-title');
+const $feedDomain      = document.getElementById('feed-domain');
+const $emptyState      = document.getElementById('empty-state');
+const $scenarioList    = document.getElementById('scenario-list');
+const $btnDemo         = document.getElementById('btn-demo');
+const $btnReset        = document.getElementById('btn-reset');
+const $speedSlider     = document.getElementById('speed-slider');
+const $speedVal        = document.getElementById('speed-val');
+const $globalStatus    = document.getElementById('global-status');
+const $globalStatusTxt = document.getElementById('global-status-text');
+const $agentStatus     = document.getElementById('agent-status');
+const $agentStatusTxt  = document.getElementById('agent-status-text');
+const $statTurns       = document.getElementById('stat-turns');
+const $statExps        = document.getElementById('stat-exps');
+const $statScore       = document.getElementById('stat-score');
+const $statConf        = document.getElementById('stat-conf');
+const $turnProgress    = document.getElementById('turn-progress');
+const $turnsUsed       = document.getElementById('turns-used');
+const $turnsMax        = document.getElementById('turns-max');
+const $timeline        = document.getElementById('timeline');
+
+// ─────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
+
+function speedMs() { return SPEED_MAP[+$speedSlider.value] || 1800; }
+function typeChars() { return TYPE_SPEED_MAP[+$speedSlider.value] || 8; }
+
+function setGlobalStatus(cls, text) {
+  $globalStatus.className = `status-badge status-${cls}`;
+  $globalStatusTxt.textContent = text;
+}
+
+function setAgentStatus(cls, text) {
+  $agentStatus.className = `status-badge status-${cls}`;
+  $agentStatusTxt.textContent = text;
+}
+
+function updateStats() {
+  $statTurns.textContent = state.turnCount;
+  $statExps.textContent  = state.expCount;
+  $statScore.textContent = state.finalScore !== null ? `${state.finalScore}/4` : '—';
+  $statConf.textContent  = state.finalConf || '—';
+  const pct = state.maxTurns ? Math.min(100, Math.round(state.expCount / state.maxTurns * 100)) : 0;
+  $turnProgress.style.width = pct + '%';
+  $turnsUsed.textContent = state.expCount;
+  $turnsMax.textContent  = state.maxTurns || '—';
+}
+
+function addTimelineEntry(type, text) {
+  const empty = $timeline.querySelector('[style]');
+  if (empty) empty.remove();
+
+  const dotClass = type === 'exp' ? 'dot-exp' : type === 'fail' ? 'dot-fail' : 'dot-conclude';
+  const el = document.createElement('div');
+  el.className = 'timeline-entry';
+  el.innerHTML = `<div class="timeline-dot ${dotClass}"></div><div class="timeline-text">${escHtml(text)}</div>`;
+  $timeline.appendChild(el);
+}
+
+function scrollFeedBottom() {
+  $feed.scrollTo({ top: $feed.scrollHeight, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Typing animation
+// ─────────────────────────────────────────────────────────────────
+async function typeInto(el, text) {
+  const chunkSize = typeChars();
+  el.classList.add('typing-cursor');
+  for (let i = 0; i < text.length; i += chunkSize) {
+    if (!state.playing) { el.textContent = text; break; }
+    el.textContent = text.slice(0, i + chunkSize);
+    scrollFeedBottom();
+    await sleep(16);
+  }
+  el.classList.remove('typing-cursor');
+  el.textContent = text;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Turn renderers
+// ─────────────────────────────────────────────────────────────────
+function makeTurnShell(avatarClass, avatarLabel, agentClass, agentLabel) {
+  const wrap = document.createElement('div');
+  wrap.className = 'turn';
+
+  const avatar = document.createElement('div');
+  avatar.className = `turn-avatar ${avatarClass}`;
+  avatar.textContent = avatarLabel;
+
+  const body = document.createElement('div');
+  body.className = 'turn-body';
+  body.innerHTML = `
+    <div class="turn-header">
+      <span class="turn-agent ${agentClass}">${escHtml(agentLabel)}</span>
+      <span class="turn-timestamp">${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+    </div>
+  `;
+
+  const content = document.createElement('div');
+  content.className = 'turn-content';
+  body.appendChild(content);
+
+  wrap.appendChild(avatar);
+  wrap.appendChild(body);
+  $feed.appendChild(wrap);
+  scrollFeedBottom();
+  return content;
+}
+
+async function renderQuestion(turn) {
+  setAgentStatus('idle', 'posing question');
+  const content = makeTurnShell('avatar-question', 'Q', 'agent-question', 'Research Question');
+  await typeInto(content, turn.question || '');
+}
+
+async function renderScientist(turn, turnIdx) {
+  state.turnCount++;
+  setAgentStatus('thinking', 'GPT-1900 thinking');
+  setGlobalStatus('thinking', 'GPT-1900');
+  updateStats();
+
+  const content = makeTurnShell('avatar-scientist', 'GPT', 'agent-scientist', 'GPT-1900 Scientist');
+
+  const prose = extractProse(turn.content);
+  if (prose) await typeInto(content, prose);
+
+  if (turn.tool_call) {
+    const toolEl = buildToolCallEl(turn.tool_call);
+    content.parentElement.appendChild(toolEl);
+    scrollFeedBottom();
+  }
+
+  await sleep(speedMs() * 0.4);
+}
+
+async function renderSimulator(turn) {
+  setAgentStatus('running', 'Simulator running');
+  setGlobalStatus('running', 'Simulator');
+  state.expCount++;
+  updateStats();
+
+  addTimelineEntry(
+    turn.success ? 'exp' : 'fail',
+    `Exp. ${turn.experiment_number}: ${turn.success ? 'success' : 'FAILURE'}`
+  );
+
+  const content = makeTurnShell('avatar-simulator', 'SIM', 'agent-simulator', 'Simulator');
+
+  const wrapper = document.createElement('div');
+  wrapper.className = `sim-block${turn.success ? '' : ' sim-failure'}`;
+  const expLabel = `Experiment ${turn.experiment_number}`;
+  wrapper.innerHTML = `
+    <div class="sim-header">
+      <div class="sim-icon"></div>
+      <div class="sim-label">${escHtml(expLabel)} — ${turn.success ? 'Observations' : 'Laboratory Difficulty'}</div>
+    </div>
+    <div class="sim-content"></div>
+  `;
+  content.parentElement.appendChild(wrapper);
+
+  const simContent = wrapper.querySelector('.sim-content');
+  await typeInto(simContent, turn.content);
+  scrollFeedBottom();
+  await sleep(speedMs() * 0.3);
+}
+
+async function renderConclusion(turn) {
+  setAgentStatus('thinking', 'GPT-1900 concluding');
+  setGlobalStatus('thinking', 'concluding');
+  state.turnCount++;
+  state.finalConf = turn.tool_call?.confidence || '—';
+  updateStats();
+
+  addTimelineEntry('conclude', 'Conclusion reached');
+
+  const content = makeTurnShell('avatar-scientist', 'GPT', 'agent-scientist', 'GPT-1900 Scientist');
+
+  const prose = extractProse(turn.content);
+  if (prose) await typeInto(content, prose);
+
+  if (turn.tool_call) {
+    const toolEl = buildToolCallEl(turn.tool_call);
+    content.parentElement.appendChild(toolEl);
+    scrollFeedBottom();
+  }
+
+  await sleep(speedMs() * 0.5);
+}
+
+async function renderJudge(turn) {
+  setAgentStatus('scoring', 'Judge evaluating');
+  setGlobalStatus('scoring', 'Evaluator');
+  state.finalScore = turn.score?.total ?? null;
+  updateStats();
+
+  const content = makeTurnShell('avatar-judge', 'JDG', 'agent-judge', 'Evaluator');
+
+  const judgeEl = buildJudgeCard(turn.score);
+  content.parentElement.appendChild(judgeEl);
+  scrollFeedBottom();
+  await sleep(speedMs() * 0.2);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Build tool call element
+// ─────────────────────────────────────────────────────────────────
+function buildToolCallEl(tool) {
+  const isConclude = tool.name === 'conclude';
+  const el = document.createElement('div');
+  el.className = `tool-block${isConclude ? ' tool-conclude' : ''}`;
+
+  let bodyHtml = '';
+
+  if (isConclude) {
+    bodyHtml = `
+      <div class="tool-field">
+        <div class="tool-field-label">Hypothesis</div>
+        <div class="tool-field-value">${escHtml(tool.hypothesis || '')}</div>
+      </div>
+      <div class="tool-field">
+        <div class="tool-field-label">Confidence</div>
+        <div class="tool-field-value">${escHtml(tool.confidence || '')}</div>
+      </div>
+    `;
+  } else {
+    const params = tool.parameters || {};
+    const paramsHtml = Object.keys(params).length ? `
+      <div class="tool-params">
+        ${Object.entries(params).map(([k,v]) => `
+          <div class="param-row"><span class="param-key">${escHtml(k)}:</span><span class="param-val">${escHtml(v)}</span></div>
+        `).join('')}
+      </div>
+    ` : '';
+
+    bodyHtml = `
+      <div class="tool-field">
+        <div class="tool-field-label">Description</div>
+        <div class="tool-field-value">${escHtml(tool.description || '')}</div>
+      </div>
+      ${paramsHtml ? `<div class="tool-field"><div class="tool-field-label">Parameters</div>${paramsHtml}</div>` : ''}
+    `;
+  }
+
+  el.innerHTML = `
+    <div class="tool-header">
+      <div class="tool-name">TOOL: ${escHtml(tool.name)}</div>
+      <div class="tool-chip">${isConclude ? 'CONCLUDE' : 'PROPOSE_EXPERIMENT'}</div>
+    </div>
+    <div class="tool-body">${bodyHtml}</div>
+  `;
+  return el;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Build judge card
+// ─────────────────────────────────────────────────────────────────
+function buildJudgeCard(score) {
+  const el = document.createElement('div');
+  el.className = 'judge-card';
+
+  const total = score?.total ?? 0;
+  const pips = [1,2,3,4].map(i => `<div class="pip ${i <= total ? 'pip-filled' : 'pip-empty'}"></div>`).join('');
+
+  const criteria = [
+    ['phenomenon_identified', 'Phenomenon identified'],
+    ['qualitative_mechanism', 'Qualitative mechanism'],
+    ['quantitative_form',    'Quantitative form'],
+    ['confidence_calibrated','Confidence calibrated'],
+  ];
+
+  const criteriaHtml = criteria.map(([key, label]) => {
+    const pass = score?.[key];
+    return `
+      <div class="criterion">
+        <div class="criterion-icon ${pass ? 'criterion-pass' : 'criterion-fail'}">${pass ? '✓' : '✗'}</div>
+        <div class="criterion-label">${escHtml(label)}</div>
+      </div>
+    `;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="judge-card-header">
+      <div class="judge-title">Final Assessment</div>
+      <div class="score-total">${total}<span class="score-denom">/4</span></div>
+      <div class="score-pips">${pips}</div>
+    </div>
+    <div class="judge-criteria">${criteriaHtml}</div>
+    ${score?.reasoning ? `<div class="judge-reasoning">${escHtml(score.reasoning)}</div>` : ''}
+  `;
+  return el;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Extract prose (text before TOOL: block)
+// ─────────────────────────────────────────────────────────────────
+function extractProse(content) {
+  if (!content) return '';
+  const idx = content.indexOf('TOOL:');
+  const prose = idx > 0 ? content.slice(0, idx).trim() : content.trim();
+  return prose;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Main playback loop
+// ─────────────────────────────────────────────────────────────────
+async function playDemo() {
+  if (!state.demoData) return;
+  state.playing = true;
+  $btnDemo.disabled = true;
+  $btnReset.disabled = false;
+
+  $feed.innerHTML = '';
+  state.turnCount = 0;
+  state.expCount  = 0;
+  state.finalScore = null;
+  state.finalConf  = null;
+  $timeline.innerHTML = '<div style="font-size:0.8rem;color:var(--ink3);font-style:italic;">No experiments yet</div>';
+  updateStats();
+
+  setGlobalStatus('thinking', 'starting');
+
+  const data = state.demoData;
+  const turns = data.turns;
+
+  await renderQuestion({ question: data.question });
+  await sleep(speedMs());
+
+  for (let i = 0; i < turns.length && state.playing; i++) {
+    const turn = turns[i];
+
+    if (turn.type === 'scientist') {
+      if (turn.tool_call?.name === 'conclude') {
+        await renderConclusion(turn);
+      } else {
+        await renderScientist(turn, i);
+      }
+      await sleep(speedMs());
+    }
+
+    else if (turn.type === 'simulator') {
+      await renderSimulator(turn);
+      await sleep(speedMs());
+    }
+
+    else if (turn.type === 'judge') {
+      await renderJudge(turn);
+    }
+  }
+
+  if (state.playing) {
+    setGlobalStatus('done', 'complete');
+    setAgentStatus('done', 'evaluation done');
+    $btnDemo.textContent = '▶ Run Again';
+    $btnDemo.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Reset
+// ─────────────────────────────────────────────────────────────────
+function resetPlayback() {
+  state.playing = false;
+  clearTimeout(state.playTimer);
+  $feed.innerHTML = '<div id="empty-state"><div class="empty-glyph">⚗</div><div class="empty-text">Press <em>Run Demo</em> to begin the investigation.</div></div>';
+  state.turnCount = 0; state.expCount = 0;
+  state.finalScore = null; state.finalConf = null;
+  $timeline.innerHTML = '<div style="font-size:0.8rem;color:var(--ink3);font-style:italic;">No experiments yet</div>';
+  updateStats();
+  setGlobalStatus('idle', 'idle');
+  setAgentStatus('idle', 'none');
+  $btnDemo.disabled = !state.selectedId;
+  $btnDemo.textContent = '▶ Run Demo';
+  $btnReset.disabled = true;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Scenario selection
+// ─────────────────────────────────────────────────────────────────
+async function selectScenario(id) {
+  if (state.playing) resetPlayback();
+
+  state.selectedId = id;
+  document.querySelectorAll('.scenario-card').forEach(el => {
+    el.classList.toggle('active', el.dataset.id === id);
+  });
+
+  const meta = state.scenarios.find(s => s.id === id);
+  if (meta) {
+    $feedTitle.textContent = meta.question;
+    $feedTitle.style.fontStyle = 'normal';
+    $feedTitle.style.color = 'var(--ink)';
+    $feedDomain.textContent = (meta.domain || '') + (meta.tier ? ' · ' + meta.tier.toUpperCase() : '') + (meta.difficulty ? ' · difficulty ' + '★'.repeat(meta.difficulty) : '');
+    state.maxTurns = meta.max_turns || 10;
+    $turnsMax.textContent = state.maxTurns;
+  }
+
+  try {
+    const res = await fetch(`/api/demo/${id}`);
+    if (!res.ok) throw new Error('not found');
+    state.demoData = await res.json();
+    $btnDemo.disabled = false;
+  } catch {
+    state.demoData = null;
+    $btnDemo.disabled = true;
+  }
+
+  $feed.innerHTML = '<div id="empty-state"><div class="empty-glyph">⚗</div><div class="empty-text">Press <em>Run Demo</em> to begin the investigation.</div></div>';
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Load scenarios from API
+// ─────────────────────────────────────────────────────────────────
+async function loadScenarios() {
+  try {
+    const res = await fetch('/api/scenarios');
+    state.scenarios = await res.json();
+  } catch {
+    state.scenarios = [
+      { id: 'free_fall_galileo',              tier: 'baseline', domain: 'mechanics',                   difficulty: 1, max_turns: 5,  question: 'Does the rate of fall depend upon the weight of the body?' },
+      { id: 'photoelectric_effect',           tier: 'target',   domain: 'optics / electromagnetism',   difficulty: 3, max_turns: 10, question: 'What property of light determines whether particles are discharged from the metal?' },
+      { id: 'uv_catastrophe',                 tier: 'target',   domain: 'thermodynamics / optics',      difficulty: 4, max_turns: 10, question: 'Which assumption underlying the classical prediction must be incorrect?' },
+      { id: 'special_relativity_michelson_morley', tier: 'stretch', domain: 'electromagnetism / mechanics', difficulty: 5, max_turns: 12, question: 'How can the Michelson-Morley null result be reconciled with Maxwell\'s equations?' },
+    ];
+  }
+
+  renderScenarioList();
+}
+
+function tierBadgeClass(tier) {
+  return `badge-tier-${tier || 'baseline'}`;
+}
+
+function renderScenarioList() {
+  $scenarioList.innerHTML = '';
+  for (const s of state.scenarios) {
+    const card = document.createElement('div');
+    card.className = 'scenario-card';
+    card.dataset.id = s.id;
+
+    const shortQ = s.question.length > 90 ? s.question.slice(0, 87) + '…' : s.question;
+    const stars = s.difficulty ? '★'.repeat(s.difficulty) + '☆'.repeat(5 - s.difficulty) : '';
+
+    card.innerHTML = `
+      <div class="scenario-name">${escHtml(shortQ)}</div>
+      <div class="scenario-meta">
+        <span class="badge ${tierBadgeClass(s.tier)}">${escHtml(s.tier || '')}</span>
+        <span class="badge badge-diff">${escHtml(stars)}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => selectScenario(s.id));
+    $scenarioList.appendChild(card);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Event listeners
+// ─────────────────────────────────────────────────────────────────
+$btnDemo.addEventListener('click', () => {
+  if (state.demoData) playDemo();
+});
+
+$btnReset.addEventListener('click', () => resetPlayback());
+
+$speedSlider.addEventListener('input', () => {
+  const v = +$speedSlider.value;
+  const labels = {1:'0.5×', 2:'1×', 3:'2×', 4:'4×', 5:'Max'};
+  $speedVal.textContent = labels[v] || '1×';
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Bootstrap
+// ─────────────────────────────────────────────────────────────────
+$btnDemo.disabled = true;
+$btnReset.disabled = true;
+loadScenarios();
+</script>
+</body>
+</html>

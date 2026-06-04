@@ -123,3 +123,7 @@ A scientist that converges in 2 experiments vs. one that meanders for 20 are mea
 - [GPT-1900 on HuggingFace](https://huggingface.co/mhla/gpt1900-d34-22btok)
 - [TimeCapsuleLLM](https://github.com/haykgrigo3/TimeCapsuleLLM)
 - [Hacker News discussion](https://news.ycombinator.com/item?id=46590280)
+
+## AI Usage policy
+
+I used 
